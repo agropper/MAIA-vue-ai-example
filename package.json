@@ -13,6 +13,8 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@google-cloud/vertexai": "^1.8.1",
+    "@google/generative-ai": "^0.20.0",
     "@quasar/extras": "^1.16.12",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.2",

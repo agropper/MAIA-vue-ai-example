@@ -1,4 +1,4 @@
-<script setup lang="ts" --module="esnext">
+<script setup lang="ts">
 import OpenAI from 'openai'
 import { ref, reactive } from 'vue'
 import VueMarkdown from 'vue-markdown-render'
@@ -11,7 +11,8 @@ import {
   QCircularProgress,
   QFile,
   QIcon,
-  QInput
+  QInput,
+  QSelect
 } from 'quasar'
 import { GNAP } from 'vue3-gnap'
 import PopUp from './PopUp.vue'
@@ -47,6 +48,15 @@ const formState = reactive<QueryFormState>({
 const fileFormState = reactive<FileFormState>({
   file: null
 })
+
+// AI options for the dropdown
+const aiOptions = [
+  { label: 'OpenAI', value: '1' },
+  { label: 'Gemini', value: '2' }
+]
+
+// Selected AI option
+const selectedAiOption = ref('1') // Default to OpenAI
 
 // Helper functions
 const showPopup = () => {
@@ -274,7 +284,7 @@ const saveToNosh = async () => {
   }
 }
 
-// Send query to OpenAI
+// Send query to AI
 const sendQuery = () => {
   appState.isLoading.value = true
   appState.activeQuestion.value = {
@@ -283,10 +293,12 @@ const sendQuery = () => {
   }
   postData('/.netlify/functions/ai-chat', {
     chatHistory: chatHistory.value,
-    newValue: formState.currentQuery
+    newValue: formState.currentQuery,
+    aiOption: selectedAiOption.value
   }).then((data) => {
-    if (!data) {
-      writeMessage('Failed to get response from AI', 'error')
+    console.log('DATA', data)
+    if (!data || data.message) {
+      writeMessage(data ? data.message : 'Failed to get response from AI', 'error')
       appState.isLoading.value = false
       appState.activeQuestion.value = {
         role: 'user',
@@ -300,18 +312,21 @@ const sendQuery = () => {
       content: ''
     }
     chatHistory.value = data
+
     formState.currentQuery = ''
     setTimeout(() => {
       window.scrollTo(0, document.body.scrollHeight)
     }, 100)
   })
 }
+
 function validateFileSize(file: File) {
   if (!file) {
     return false
   }
   return file.size <= MAX_SIZE
 }
+
 // Upload file to System Content
 async function uploadFile(e: Event) {
   let fileInput = e.target as HTMLInputElement
@@ -326,12 +341,13 @@ async function uploadFile(e: Event) {
   const formData = new FormData()
   formData.append('file', fileInput.files[0])
   formData.append('chatHistory', JSON.stringify(chatHistory.value))
+  formData.append('aiOption', selectedAiOption.value)
 
   try {
-    const response = (await fetch('/.netlify/functions/ai-chat', {
+    const response = await fetch('/.netlify/functions/ai-chat', {
       method: 'POST',
       body: formData
-    })) as Response
+    })
 
     if (!response.ok) {
       writeMessage('Failed to upload file', 'error')
@@ -467,6 +483,16 @@ const closeSession = () => {
   <div class="bottom-toolbar">
     <div class="prompt">
       <div class="inner">
+        <q-select
+          v-if="chatHistory.length === 0"
+          v-model="selectedAiOption"
+          :options="aiOptions"
+          outlined
+          dense
+          style="width: 120px"
+          emit-value
+          map-options
+        />
         <q-btn @click="pickFiles" flat icon="attach_file" />
         <q-input
           outlined

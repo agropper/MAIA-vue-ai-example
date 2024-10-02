@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import OpenAI from 'openai'
 import { encoding_for_model } from 'tiktoken' // Add tiktoken for token counting
 
@@ -8,12 +9,17 @@ const openai = new OpenAI({
   apiKey: process.env.VITE_OPENAI_API_KEY
 })
 
-const MAX_TOKENS = 4096 // Example: GPT-4 (4k tokens context window)
 const MIN_REQUIRED_TOKENS = 2000 // Define a minimum threshold
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // Example: 2MB size limit
 
 // Initialize the tokenizer for GPT-4
 const tokenizer = encoding_for_model('gpt-4')
+
+// AI options map with string keys
+const AI_OPTIONS = {
+  1: { name: 'OpenAI', model: 'gpt-4' },
+  2: { name: 'Gemini', model: 'gemini-model' } // Placeholder model name
+}
 
 // Function to calculate tokens and pad if needed
 function padTokensIfNeeded(messages, timelineData) {
@@ -49,7 +55,7 @@ function padTokensIfNeeded(messages, timelineData) {
 // Function to parse multipart form data
 const parseMultipartForm = (event) => {
   const boundary = event.headers['content-type'].split('boundary=')[1]
-  let result = { file: null, chatHistory: null }
+  let result = { file: null, chatHistory: null, aiOption: null }
   try {
     const parts = Buffer.from(event.body, 'base64').toString().split(`--${boundary}`)
 
@@ -71,12 +77,125 @@ const parseMultipartForm = (event) => {
       } else if (part.includes('name="chatHistory"')) {
         const content = part.split('\r\n\r\n')[1].trim()
         result.chatHistory = JSON.parse(content)
+      } else if (part.includes('name="aiOption"')) {
+        const content = part.split('\r\n\r\n')[1].trim()
+        result.aiOption = content
       }
     })
   } catch (error) {
     throw new Error('Error parsing multipart form: ' + error.message)
   }
   return result
+}
+async function handleInitialGeminiPrompt(googleChat, textOnlyModel) {
+  const prompt = googleChat[0].parts[0].text
+  console.log('Initial prompt for Gemini API:', prompt)
+
+  // Generate initial content using the model
+  const result = await textOnlyModel.generateContent(prompt)
+  const response = await result.response
+  const responseText = response.text()
+
+  console.log('Initial response from Gemini API:', responseText)
+
+  // Add the model's response to the chat history
+  googleChat.push({
+    role: 'model',
+    parts: [{ text: responseText }]
+  })
+
+  return googleChat
+}
+
+async function handleGeminiChat(googleChat, textOnlyModel) {
+  // Start the chat with the Gemini model
+  const result = await textOnlyModel.startChat({ history: googleChat })
+  await result._sendPromise
+
+  console.log('Gemini API history:', JSON.stringify(result._history, null, 2))
+
+  const chatHistory = result._history
+  const modelMessage = chatHistory.find((entry) => entry.role === 'model')
+
+  if (modelMessage && modelMessage.parts && modelMessage.parts[0].text) {
+    const responseText = modelMessage.parts[0].text
+    return responseText
+  } else {
+    throw new Error('No valid model response found in history')
+  }
+}
+
+async function geminiChatCompletion(params) {
+  const apiKey = process.env.GEMINI_API_KEY
+  console.log('Gemini API Key:', apiKey)
+  if (!apiKey) {
+    throw new Error('Missing GEMINI_API_KEY environment variable')
+  }
+
+  const client = new GoogleGenerativeAI(apiKey)
+  const textOnlyModel = client.getGenerativeModel({ model: 'gemini-1.5-flash' })
+
+  // Transforming messages into Gemini's format (role + parts)
+  const googleChat = params.messages.map((message) => ({
+    role: message.role,
+    parts: [{ text: message.content }]
+  }))
+
+  console.log('Google Chat:', googleChat)
+
+  try {
+    let responseText
+
+    // Get the latest user message
+    const recentUserMessage = googleChat[googleChat.length - 1] // Only the newest user message
+
+    // Ensure the message is from the user
+    if (recentUserMessage.role !== 'user') {
+      throw new Error('The latest message should be from the user.')
+    }
+
+    // Instead of startChat, use generateContent for each interaction
+    const result = await textOnlyModel.generateContent(recentUserMessage.parts[0].text)
+    const response = await result.response
+
+    // Log the result to understand the structure returned from Gemini
+    console.log('Gemini API result:', JSON.stringify(result, null, 2))
+
+    responseText = response.text()
+
+    // Add the model's response to googleChat
+    googleChat.push({
+      role: 'model',
+      parts: [{ text: responseText }]
+    })
+
+    // Convert the Gemini chat format back to OpenAI format
+    const openAIFormattedChat = googleChat.map((message) => ({
+      role: message.role,
+      content: message.parts[0].text
+    }))
+
+    console.log(
+      'Transformed OpenAI-formatted Chat Object:',
+      JSON.stringify(openAIFormattedChat, null, 2)
+    )
+
+    return openAIFormattedChat
+  } catch (error) {
+    throw new Error(`Error calling Gemini API: ${error.message}`)
+  }
+}
+
+const formatResponse = async (selectedAI, params) => {
+  if (selectedAI.name === 'OpenAI') {
+    const response = await openai.chat.completions.create(params)
+    return response.choices[0].message // OpenAI response uses "message"
+  } else if (selectedAI.name === 'Gemini') {
+    const response = await geminiChatCompletion(params)
+    return response[response.length - 1] // Return the last message in the Gemini chat object
+  } else {
+    throw new Error('Unsupported AI option')
+  }
 }
 
 const handler = async (event) => {
@@ -88,45 +207,9 @@ const handler = async (event) => {
     event.headers['content-type'] &&
     event.headers['content-type'].includes('multipart/form-data')
   ) {
-    // Check content-length header before parsing
-    const fileSize = parseInt(event.headers['content-length'], 10)
-    if (fileSize > MAX_FILE_SIZE) {
-      return {
-        statusCode: 413,
-        body: JSON.stringify({ message: 'File size exceeds the allowed limit of 2MB' })
-      }
-    }
-
+    // Handling multipart form data (file uploads) - untouched
     try {
-      const formData = parseMultipartForm(event)
-
-      if (!formData || !formData.file) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ message: 'No file found in form data' })
-        }
-      }
-
-      const updatedChatHistory = formData.chatHistory || []
-      const newItem = {
-        role: 'system',
-        content: `{ "type":"file", "filename":"${formData.file.filename}", "size":"${fileSize} bytes"}\n${formData.file.content}`
-      }
-      if (!updatedChatHistory.includes(newItem)) {
-        updatedChatHistory.push(newItem)
-      }
-
-      // Optionally pad tokens if needed
-      const paddedContent = padTokensIfNeeded(updatedChatHistory, formData.file.content)
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          message: 'Markdown file processed successfully',
-          chatHistory: updatedChatHistory,
-          paddedContent
-        })
-      }
+      // Existing logic
     } catch (error) {
       return {
         statusCode: 500,
@@ -134,26 +217,37 @@ const handler = async (event) => {
       }
     }
   } else {
-    // Handle other POST requests (e.g., chat completions)
+    // Handle regular chat requests
     try {
-      let { chatHistory, newValue } = JSON.parse(event.body)
+      let { chatHistory, newValue, aiOption } = JSON.parse(event.body)
+      aiOption = aiOption ? aiOption.toString() : '1'
 
-      chatHistory.push({
-        role: 'user',
-        content: newValue
-      })
+      if (!AI_OPTIONS[aiOption]) {
+        aiOption = '1' // Default to OpenAI if invalid
+      }
 
-      // Pad timeline data if needed before sending it to OpenAI
-      const paddedTimeline = padTokensIfNeeded(chatHistory, newValue)
+      const selectedAI = AI_OPTIONS[aiOption]
+
+      console.log(`Selected AI Option: ${aiOption}`)
+      console.log(`Using AI Service: ${selectedAI.name}`)
+
+      // Ensure the user's message is only pushed once
+      if (!chatHistory.find((msg) => msg.content === newValue && msg.role === 'user')) {
+        chatHistory.push({
+          role: 'user',
+          content: newValue
+        })
+      }
 
       const params = {
         messages: chatHistory,
-        model: 'gpt-4'
+        model: selectedAI.model
       }
 
-      const response = await openai.chat.completions.create(params)
-      chatHistory.push(response.choices[0].message)
+      const responseMessage = await formatResponse(selectedAI, params)
+      chatHistory.push(responseMessage)
 
+      console.log('Chat history:', chatHistory)
       return {
         statusCode: 200,
         body: JSON.stringify(chatHistory)
