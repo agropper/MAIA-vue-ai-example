@@ -41,3 +41,7 @@ defineExpose({ openPopup })
     </q-card>
   </q-dialog>
 </template>
+
+<script lang="ts">
+export default {}
+</script>

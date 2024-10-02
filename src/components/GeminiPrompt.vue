@@ -291,7 +291,7 @@ const sendQuery = () => {
     role: 'user',
     content: formState.currentQuery || ''
   }
-  postData('/.netlify/functions/ai-chat', {
+  postData('/.netlify/functions/open-ai-chat', {
     chatHistory: chatHistory.value,
     newValue: formState.currentQuery,
     aiOption: selectedAiOption.value
@@ -344,7 +344,7 @@ async function uploadFile(e: Event) {
   formData.append('aiOption', selectedAiOption.value)
 
   try {
-    const response = await fetch('/.netlify/functions/ai-chat', {
+    const response = await fetch('/.netlify/functions/open-ai-chat', {
       method: 'POST',
       body: formData
     })
@@ -484,7 +484,7 @@ const closeSession = () => {
     <div class="prompt">
       <div class="inner">
         <q-select
-          v-if="chatHistory.length === 0"
+          v-if="chatHistory.filter((x) => x.role !== 'system').length === 0"
           v-model="selectedAiOption"
           :options="aiOptions"
           outlined
@@ -535,3 +535,6 @@ const closeSession = () => {
     :on-close="() => appState.popupContentFunction.value()"
   />
 </template>
+<script lang="ts">
+export default {}
+</script>
