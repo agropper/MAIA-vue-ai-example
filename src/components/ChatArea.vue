@@ -74,7 +74,7 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 import { defineComponent } from 'vue'
 import { QBtn, QChatMessage, QCard, QCardSection, QCardActions } from 'quasar'
 import VueMarkdown from 'vue-markdown-render'
@@ -97,13 +97,13 @@ export default defineComponent({
     }
   },
   methods: {
-    editMessage(idx) {
+    editMessage(idx: number) {
       this.$emit('edit-message', idx)
     },
-    saveMessage(idx, content) {
+    saveMessage(idx: number, content: string) {
       this.$emit('save-message', idx, content)
     },
-    viewSystemMessage(content) {
+    viewSystemMessage(content: string) {
       const systemContent = content.split('\n').splice(1).join('\n')
       this.$emit('view-system-message', systemContent)
     },

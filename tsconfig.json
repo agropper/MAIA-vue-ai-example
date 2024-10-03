@@ -1,7 +1,13 @@
 {
   "files": [],
   "compilerOptions": {
-    // ... other options ...
+    "module": "esnext",
+    "target": "esnext",
+    "jsx": "preserve",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "types": ["vite/client", "vue"]
   },
   "references": [

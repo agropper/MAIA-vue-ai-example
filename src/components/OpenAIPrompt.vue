@@ -1,10 +1,11 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
-import { QBtn, QCircularProgress, QFile, QIcon, QInput } from 'quasar'
-import { GNAP } from 'vue3-gnap'
+import { QFile, QIcon } from 'quasar'
+
 import { getSystemMessageType, pickFiles, convertJSONtoMarkdown } from '../utils'
 import { useChatState } from '../composables/useChatState'
 import ChatArea from './ChatArea.vue'
+import BottomToolbar from './BottomToolbar.vue'
 import {
   showAuth,
   showJWT,
@@ -17,12 +18,9 @@ import PopUp from './PopUp.vue'
 export default defineComponent({
   name: 'OpenAIPrompt',
   components: {
-    QBtn,
-    QCircularProgress,
+    BottomToolbar,
     QFile,
     QIcon,
-    QInput,
-    GNAP,
     PopUp,
     ChatArea
   },
@@ -144,7 +142,7 @@ export default defineComponent({
     @edit-message="editMessage"
     @save-message="saveMessage"
     @view-system-message="
-      (content) => {
+      (content: string) => {
         appState.popupContent = content
         showPopup()
       }
@@ -155,39 +153,13 @@ export default defineComponent({
     @get-system-message-type="getSystemMessageType"
   />
 
-  <div class="bottom-toolbar">
-    <div class="prompt">
-      <div class="inner">
-        <q-btn @click="pickFiles" flat icon="attach_file" />
-        <q-input
-          outlined
-          placeholder="Message ChatGPT"
-          v-model="appState.currentQuery"
-          @keyup.enter="triggerSendQuery"
-        />
-        <q-btn color="primary" label="Send" @click="triggerSendQuery" size="sm" />
-        <GNAP
-          v-if="!appState.isAuthorized"
-          name="gnap-btn"
-          helper="blue small"
-          @on-authorized="triggerAuth"
-          @jwt="triggerJWT"
-          :access="appState.access"
-          server="https://trustee.health/api/as"
-          label="Connect to NOSH"
-        />
-      </div>
-    </div>
-    <div :class="'message ' + appState.messageType">
-      <p v-if="appState.isMessage">
-        {{ appState.message }}
-      </p>
-    </div>
-    <div :class="'loading-pane ' + appState.isLoading">
-      <q-circular-progress indeterminate rounded size="30px" color="primary" class="q-ma-md" />
-    </div>
-  </div>
-
+  <BottomToolbar
+    :appState="appState"
+    :pickFiles="pickFiles"
+    :triggerSendQuery="triggerSendQuery"
+    :triggerAuth="triggerAuth"
+    :triggerJWT="triggerJWT"
+  />
   <PopUp
     ref="popupRef"
     :content="appState.popupContent"
