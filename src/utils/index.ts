@@ -1,4 +1,4 @@
-import type { AppState, ChatHistoryItem, FileFormState, QueryFormState } from '../types'
+import type { ChatHistoryItem } from '../types'
 
 const MAX_SIZE = 2 * 1024 * 1024 // 2MB
 const TOKEN_LIMIT = 2048 // Adjust based on the model

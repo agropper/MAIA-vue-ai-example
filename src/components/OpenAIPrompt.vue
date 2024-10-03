@@ -70,7 +70,7 @@ export default defineComponent({
     }
 
     const triggerSendQuery = async () => {
-      await sendQuery(appState, appState.currentQuery || '', writeMessage)
+      await sendQuery(appState, writeMessage)
       // Handle result if needed, e.g., add to chat history or update UI
     }
 
