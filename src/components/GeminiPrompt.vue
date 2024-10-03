@@ -5,9 +5,7 @@ import { QFile, QIcon } from 'quasar'
 import { getSystemMessageType, pickFiles, convertJSONtoMarkdown } from '../utils'
 import { useChatState } from '../composables/useChatState'
 import ChatArea from './ChatArea.vue'
-import JumpNav from './JumpNav.vue'
 import BottomToolbar from './BottomToolbar.vue'
-
 import {
   showAuth,
   showJWT,
@@ -16,9 +14,9 @@ import {
   uploadFile
 } from '../composables/useAuthHandling'
 import PopUp from './PopUp.vue'
-
+import JumpNav from './JumpNav.vue'
 export default defineComponent({
-  name: 'OpenAIPrompt',
+  name: 'GeminiPrompt',
   components: {
     BottomToolbar,
     QFile,
@@ -138,7 +136,7 @@ export default defineComponent({
       <q-icon name="attach_file"></q-icon>
     </template>
   </q-file>
-  <jump-nav v-if="appState.chatHistory.length === 0"></jump-nav>
+  <jump-nav></jump-nav>
   <!-- Chat Area Component -->
   <ChatArea
     :appState="appState"

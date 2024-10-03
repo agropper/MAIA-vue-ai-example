@@ -223,3 +223,14 @@
     display: flex;
   }
 }
+.jump-nav-wrapper {
+  position: fixed;
+  z-index: 9999;
+  width: 90%;
+  max-width: 800px;
+  margin: 0 auto;
+  left: 0;
+  right: 0;
+  top: 10px;
+  text-align: right;
+}

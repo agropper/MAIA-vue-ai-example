@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import OpenAIPrompt from '../../components/OpenAIPrompt.vue'
+import GeminiPrompt from '../../components/GeminiPrompt.vue'
 </script>
 
 <template>
   <div class="wrapper">
-    <h1>Gemini</h1>
-    <OpenAIPrompt />
+    <GeminiPrompt />
   </div>
 </template>
