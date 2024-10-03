@@ -1,14 +1,11 @@
 import { checkTimelineSize, truncateTimeline } from '../utils'
 
-import { useChatState } from '../composables/useChatState'
-
-// Extracting the necessary state from useChatState
-const { appState, writeMessage } = useChatState()
+import type { AppState } from '../types'
 
 /**
  * Confirms authorization to Trustee and updates the state.
  */
-function showAuth() {
+function showAuth(appState: AppState, writeMessage: (message: string, type: string) => void) {
   appState.isAuthorized = true
   writeMessage('Authorized', 'success')
 }
@@ -18,7 +15,13 @@ function showAuth() {
  *
  * @param {string} jwt - The JSON Web Token received for authorization
  */
-async function showJWT(jwt: string, showPopup: () => void, closeSession: () => void) {
+async function showJWT(
+  jwt: string,
+  showPopup: () => void,
+  closeSession: () => void,
+  writeMessage: (message: string, type: string) => void,
+  appState: AppState
+) {
   if (!appState.uri) {
     writeMessage('No URI found in Querystring or LocalStorage', 'error')
     return

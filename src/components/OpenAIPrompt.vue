@@ -147,6 +147,13 @@ const editMessage = (idx: number) => {
   return
 }
 
+const triggerAuth = () => {
+  showAuth(appState, writeMessage)
+}
+const triggerJWT = (jwt: string) => {
+  showJWT(jwt, showPopup, closeSession, writeMessage, appState)
+}
+
 const saveMessage = (idx: number, content: string) => {
   appState.chatHistory[idx].content = content
   appState.editBox.splice(appState.editBox.indexOf(idx), 1)
@@ -273,8 +280,8 @@ const closeSession = () => {
           v-if="!appState.isAuthorized"
           name="gnap-btn"
           helper="blue small"
-          @on-authorized="showAuth"
-          @jwt="showJWT"
+          @on-authorized="triggerAuth"
+          @jwt="triggerJWT"
           :access="appState.access"
           server="https://trustee.health/api/as"
           label="Connect to NOSH"
