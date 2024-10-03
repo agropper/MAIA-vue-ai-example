@@ -27,7 +27,7 @@ async function showJWT(jwt: string, showPopup: () => void, closeSession: () => v
   appState.jwt = jwt
   writeMessage('Loading Patient Timeline...', 'success')
   appState.isLoading = true
-
+  console.log('Loading timeline', appState.uri)
   try {
     const response = await fetch(appState.uri, {
       headers: {
@@ -40,7 +40,7 @@ async function showJWT(jwt: string, showPopup: () => void, closeSession: () => v
     }
 
     let data = await response.text()
-
+    console.log('Timeline loaded', data)
     // Assuming checkTimelineSize is a utility function already available
     let timelineCheck = checkTimelineSize(data)
 
@@ -69,6 +69,7 @@ async function showJWT(jwt: string, showPopup: () => void, closeSession: () => v
 
     appState.isLoading = false
     writeMessage('Patient Timeline Loaded', 'success')
+    console.log('Patient Timeline Loaded', data)
   } catch (error: any) {
     writeMessage(`Error: ${error.message}`, 'error')
   } finally {
