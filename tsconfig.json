@@ -1,5 +1,9 @@
 {
   "files": [],
+  "compilerOptions": {
+    // ... other options ...
+    "types": ["vite/client", "vue"]
+  },
   "references": [
     {
       "path": "./tsconfig.node.json"
