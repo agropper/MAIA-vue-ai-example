@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import { ref } from 'vue'
+<script lang="ts">
+import { defineComponent, ref } from 'vue'
 import VueMarkdown from 'vue-markdown-render'
 import {
   QBtn,
@@ -13,180 +13,138 @@ import {
   QInput
 } from 'quasar'
 import { GNAP } from 'vue3-gnap'
-import {
-  getSystemMessageType,
-  postData,
-  pickFiles,
-  validateFileSize,
-  convertJSONtoMarkdown,
-  checkTimelineSize,
-  truncateTimeline
-} from '../utils'
+import { getSystemMessageType, pickFiles, convertJSONtoMarkdown } from '../utils'
 import { useChatState } from '../composables/useChatState'
-import { showAuth, showJWT } from '../composables/useAuthHandling'
+import {
+  showAuth,
+  showJWT,
+  saveToNosh,
+  sendQuery,
+  uploadFile
+} from '../composables/useAuthHandling'
 import PopUp from './PopUp.vue'
 
-const { appState, formState, fileFormState, writeMessage } = useChatState()
+export default defineComponent({
+  name: 'OpenAIPrompt',
+  components: {
+    VueMarkdown,
+    QBtn,
+    QCard,
+    QCardActions,
+    QCardSection,
+    QChatMessage,
+    QCircularProgress,
+    QFile,
+    QIcon,
+    QInput,
+    GNAP,
+    PopUp
+  },
+  setup() {
+    const { appState, writeMessage } = useChatState()
+    const localStorageKey = 'noshuri'
+    const popupRef = ref<InstanceType<typeof PopUp> | null>(null)
 
-const MAX_SIZE = 2 * 1024 * 1024 // 2MB
-const localStorageKey = 'noshuri'
-
-const popupRef = ref<InstanceType<typeof PopUp> | null>(null)
-
-// Helper functions
-const showPopup = () => {
-  if (popupRef.value && popupRef.value.openPopup) {
-    popupRef.value.openPopup()
-  }
-}
-
-// Save the transcript to Nosh
-const saveToNosh = async () => {
-  appState.isLoading = true
-  writeMessage('Saving to Nosh...', 'success')
-  try {
-    const response = await fetch(appState.writeuri, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${appState.jwt}`
-      },
-      body: JSON.stringify({
-        content: convertJSONtoMarkdown(appState.chatHistory, appState.userName)
-      })
-    })
-    try {
-      await response.json()
-      writeMessage('Saved to Nosh', 'success')
-      appState.isLoading = false
-      appState.popupContent = 'Session saved to Nosh. Close this window to end the session.'
-      appState.popupContentFunction = closeSession
-      showPopup()
-    } catch (error) {
-      writeMessage('Failed to get valid response.', 'error')
-      return null
-    }
-  } catch (error) {
-    writeMessage('Failed to save to Nosh', 'error')
-  }
-}
-
-// Send query to AI
-const sendQuery = () => {
-  appState.isLoading = true
-  appState.activeQuestion = {
-    role: 'user',
-    content: formState.currentQuery || ''
-  }
-  postData('/.netlify/functions/open-ai-chat', {
-    chatHistory: appState.chatHistory,
-    newValue: formState.currentQuery
-  }).then((data) => {
-    console.log('DATA', data)
-    if (!data || data.message) {
-      writeMessage(data ? data.message : 'Failed to get response from AI', 'error')
-      appState.isLoading = false
-      appState.activeQuestion = {
-        role: 'user',
-        content: ''
+    // Helper functions
+    const showPopup = () => {
+      if (popupRef.value && popupRef.value.openPopup) {
+        popupRef.value.openPopup()
       }
-      return
     }
-    appState.isLoading = false
-    appState.activeQuestion = {
-      role: 'user',
-      content: ''
+
+    // Edit Chat Message
+    const editMessage = (idx: number) => {
+      appState.editBox.push(idx)
     }
-    appState.chatHistory = data
 
-    formState.currentQuery = ''
-    setTimeout(() => {
-      window.scrollTo(0, document.body.scrollHeight)
-    }, 100)
-  })
-}
+    const triggerAuth = () => {
+      showAuth(appState, writeMessage)
+    }
 
-// Upload file to System Content
-async function uploadFile(e: Event) {
-  let fileInput = e.target as HTMLInputElement
-  if (!fileInput.files || fileInput.files.length === 0) {
-    writeMessage('No file selected', 'error')
-    return
+    const triggerJWT = (jwt: string) => {
+      showJWT(jwt, showPopup, closeSession, writeMessage, appState)
+    }
+
+    const triggerSaveToNosh = async () => {
+      await saveToNosh(appState, writeMessage, showPopup, closeSession)
+    }
+
+    const triggerSendQuery = async () => {
+      await sendQuery(appState, appState.currentQuery || '', writeMessage)
+      // Handle result if needed, e.g., add to chat history or update UI
+    }
+
+    const triggerUploadFile = async (file: File) => {
+      await uploadFile(file, appState, writeMessage)
+    }
+
+    // Usage example for file upload
+    const handleFileUpload = (event: Event) => {
+      const files = (event.target as HTMLInputElement).files
+      if (files && files.length > 0) {
+        triggerUploadFile(files[0])
+      }
+    }
+
+    const saveMessage = (idx: number, content: string) => {
+      appState.chatHistory[idx].content = content
+      const index = appState.editBox.indexOf(idx)
+      if (index > -1) {
+        appState.editBox.splice(index, 1)
+      }
+    }
+
+    const saveToFile = () => {
+      const blob = new Blob([convertJSONtoMarkdown(appState.chatHistory, appState.userName)], {
+        type: 'text/markdown'
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'transcript.md'
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+
+    const closeNoSave = () => {
+      appState.chatHistory = []
+      appState.isModal = false
+      closeSession()
+    }
+
+    const closeSession = () => {
+      appState.isAuthorized = false
+      localStorage.removeItem('gnap')
+      sessionStorage.removeItem(localStorageKey)
+      window.close()
+    }
+
+    return {
+      appState,
+      writeMessage,
+      localStorageKey,
+      popupRef,
+      showPopup,
+      editMessage,
+      triggerAuth,
+      triggerJWT,
+      triggerSaveToNosh,
+      triggerSendQuery,
+      triggerUploadFile,
+      handleFileUpload,
+      saveMessage,
+      saveToFile,
+      closeNoSave,
+      closeSession,
+      getSystemMessageType,
+      pickFiles,
+      convertJSONtoMarkdown
+    }
   }
-  if (!validateFileSize(fileInput.files[0])) {
-    writeMessage('File size is too large. Limit is ' + MAX_SIZE, 'error')
-    return
-  }
-  const formData = new FormData()
-  formData.append('file', fileInput.files[0])
-  formData.append('appState.chatHistory', JSON.stringify(appState.chatHistory))
-
-  try {
-    const response = (await fetch('/.netlify/functions/open-ai-chat', {
-      method: 'POST',
-      body: formData
-    })) as Response
-
-    if (!response.ok) {
-      writeMessage('Failed to upload file', 'error')
-      return
-    }
-    const data = await response.json()
-    if (data.chatHistory) {
-      writeMessage('File uploaded', 'success')
-      appState.chatHistory = data.chatHistory
-    }
-  } catch (error) {
-    writeMessage('Failed to upload file', 'error')
-  }
-}
-
-// Edit Chat Message
-const editMessage = (idx: number) => {
-  appState.editBox.push(idx)
-  return
-}
-
-const triggerAuth = () => {
-  showAuth(appState, writeMessage)
-}
-const triggerJWT = (jwt: string) => {
-  showJWT(jwt, showPopup, closeSession, writeMessage, appState)
-}
-
-const saveMessage = (idx: number, content: string) => {
-  appState.chatHistory[idx].content = content
-  appState.editBox.splice(appState.editBox.indexOf(idx), 1)
-  return
-}
-
-const saveToFile = () => {
-  const blob = new Blob([convertJSONtoMarkdown(appState.chatHistory, appState.userName)], {
-    type: 'text/markdown'
-  })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'transcript.md'
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-const closeNoSave = () => {
-  appState.chatHistory = []
-  appState.isModal = false
-  closeSession()
-}
-
-const closeSession = () => {
-  localStorage.removeItem('gnap')
-  sessionStorage.removeItem(localStorageKey)
-  window.close()
-}
+})
 </script>
-
 <template>
-  <q-file v-model="fileFormState.file" filled counter multiple append @input="uploadFile">
+  <q-file v-model="appState.currentFile" filled counter multiple append @input="handleFileUpload">
     <template v-slot:prepend>
       <q-icon name="attach_file"></q-icon>
     </template>
@@ -260,7 +218,7 @@ const closeSession = () => {
         size="sm"
         color="secondary"
         label="End, Sign, & Save to Nosh"
-        @click="saveToNosh"
+        @click="triggerSaveToNosh"
       ></q-btn>
       <q-btn size="sm" color="warning" label="End without Saving" @click="closeNoSave" />
     </div>
@@ -272,10 +230,10 @@ const closeSession = () => {
         <q-input
           outlined
           placeholder="Message ChatGPT"
-          v-model="formState.currentQuery"
-          @keyup.enter="sendQuery"
+          v-model="appState.currentQuery"
+          @keyup.enter="triggerSendQuery"
         ></q-input>
-        <q-btn color="primary" label="Send" @click="sendQuery" size="sm" />
+        <q-btn color="primary" label="Send" @click="triggerSendQuery" size="sm" />
         <GNAP
           v-if="!appState.isAuthorized"
           name="gnap-btn"
@@ -310,6 +268,3 @@ const closeSession = () => {
     :on-close="() => appState.popupContentFunction()"
   />
 </template>
-<script lang="ts">
-export default {}
-</script>

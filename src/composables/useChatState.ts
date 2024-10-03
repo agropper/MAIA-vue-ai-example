@@ -1,5 +1,4 @@
-import type { AppState, FileFormState, QueryFormState } from '../types'
-
+import type { AppState } from '../types'
 import { reactive } from 'vue'
 
 export function useChatState() {
@@ -52,16 +51,11 @@ export function useChatState() {
     },
     uri: uri,
     writeuri: writeuri,
+    queryuri: '/.netlify/functions/open-ai-chat',
     localStorageKey: localStorageKey,
-    access: access
-  })
-
-  const formState = reactive<QueryFormState>({
-    currentQuery: null
-  })
-
-  const fileFormState = reactive<FileFormState>({
-    file: null
+    access: access,
+    currentQuery: '',
+    currentFile: null
   })
 
   const writeMessage = (message: string, messageType: string) => {
@@ -80,8 +74,6 @@ export function useChatState() {
 
   return {
     appState,
-    formState,
-    fileFormState,
     writeMessage
   }
 }

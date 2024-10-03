@@ -26,14 +26,9 @@ export interface AppState {
   activeQuestion: OpenAI.Chat.ChatCompletionMessageParam
   uri: string
   writeuri: string
+  queryuri: string
   localStorageKey: string
   access: AccessObject[]
-}
-
-export interface QueryFormState {
-  currentQuery: string | null
-}
-
-export interface FileFormState {
-  file: File | null
+  currentQuery: string
+  currentFile: File | null
 }
