@@ -14,17 +14,11 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: entryPoints('index.html', 'gemini/index.html')
+      input: {
+        main: resolve(__dirname, 'index.html'), // main page
+        gemini: resolve(__dirname, 'gemini/index.html') // gemini page
+      }
     }
   },
   publicDir: 'public'
 })
-
-function entryPoints(...paths: string[]) {
-  const entries = paths.map((path) => {
-    const name = path.split('/').pop()?.replace('.html', '') || ''
-    return [name, resolve(__dirname, path)]
-  })
-
-  return Object.fromEntries(entries)
-}

@@ -153,6 +153,7 @@ export default defineComponent({
     :triggerSendQuery="triggerSendQuery"
     :triggerAuth="triggerAuth"
     :triggerJWT="triggerJWT"
+    placeholderText="message GeminiPrompt"
   />
   <PopUp
     ref="popupRef"

@@ -5,7 +5,7 @@
         <q-btn @click="pickFiles" flat icon="attach_file" />
         <q-input
           outlined
-          placeholder="Message ChatGPT"
+          :placeholder="placeholderText"
           v-model="appState.currentQuery"
           @keyup.enter="triggerSendQuery"
         />
@@ -75,6 +75,11 @@ export default defineComponent({
     triggerJWT: {
       type: Function as PropType<(...args: any[]) => any>,
       required: true
+    },
+    placeholderText: {
+      type: String,
+      default: 'Message Chat GPT',
+      required: false
     }
   }
 })

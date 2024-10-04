@@ -8,8 +8,4 @@ import { Quasar } from 'quasar'
 import { createApp } from 'vue'
 import quasarUserOptions from '@/quasar-user-options'
 
-const app = createApp(App)
-
-app.use(Quasar, quasarUserOptions)
-
-app.mount('#app')
+createApp(App).use(Quasar, quasarUserOptions).mount('#app')
