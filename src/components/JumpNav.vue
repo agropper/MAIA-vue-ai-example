@@ -8,8 +8,8 @@
   </div>
 </template>
 
-<script>
-import pageList from '/src/data/pageList'
+<script lang="ts">
+import pageList from '../data/pageList'
 
 export default {
   name: 'JumpNav',

@@ -8,13 +8,8 @@ import ChatArea from './ChatArea.vue'
 import JumpNav from './JumpNav.vue'
 import BottomToolbar from './BottomToolbar.vue'
 
-import {
-  showAuth,
-  showJWT,
-  saveToNosh,
-  sendQuery,
-  uploadFile
-} from '../composables/useAuthHandling'
+import { showAuth, showJWT, saveToNosh, uploadFile } from '../composables/useAuthHandling'
+import { sendQuery } from '../composables/useOpenAI'
 import PopUp from './PopUp.vue'
 
 export default defineComponent({
@@ -58,12 +53,10 @@ export default defineComponent({
 
     const triggerSendQuery = async () => {
       await sendQuery(appState, writeMessage)
-      console.log(appState.chatHistory)
       // Handle result if needed, e.g., add to chat history or update UI
     }
 
     const triggerUploadFile = async (file: File) => {
-      console.log('Uploading file:', file)
       await uploadFile(file, appState, writeMessage)
     }
 

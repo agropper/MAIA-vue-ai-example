@@ -4,17 +4,18 @@ import { reactive } from 'vue'
 export function useChatState() {
   const localStorageKey = 'noshuri'
 
-  // Get URI from querystring or local storage
-  const urlParams = new URLSearchParams(window.location.search)
-  let uri = urlParams.get('uri')
-  if (uri && uri.length > 0) {
-    sessionStorage.setItem(localStorageKey, uri)
-  } else if (sessionStorage.getItem(localStorageKey)) {
-    uri = sessionStorage.getItem(localStorageKey) || ''
-  } else {
-    uri = ''
+  let uri = ''
+  let writeuri = ''
+
+  if (typeof window !== 'undefined') {
+    // Get URI from querystring or local storage in the browser environment
+    const urlParams = new URLSearchParams(window.location.search)
+    uri = urlParams.get('uri') || sessionStorage.getItem(localStorageKey) || ''
+    if (uri.length > 0) {
+      sessionStorage.setItem(localStorageKey, uri)
+    }
+    writeuri = uri.replace('Timeline', 'md')
   }
-  const writeuri = uri.replace('Timeline', 'md')
 
   const access = [
     {
@@ -52,10 +53,12 @@ export function useChatState() {
     uri: uri,
     writeuri: writeuri,
     queryuri: '/.netlify/functions/open-ai-chat',
+    geminiuri: '/.netlify/functions/gemini-chat',
     localStorageKey: localStorageKey,
     access: access,
     currentQuery: '',
-    currentFile: null
+    currentFile: null,
+    geminiChat: null
   })
 
   const writeMessage = (message: string, messageType: string) => {
@@ -68,7 +71,7 @@ export function useChatState() {
   }
 
   // If no URI is found, write an error message
-  if (!uri) {
+  if (!uri && typeof window !== 'undefined') {
     writeMessage('No URI found in Querystring or LocalStorage', 'error')
   }
 

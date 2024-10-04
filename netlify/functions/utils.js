@@ -15,12 +15,6 @@ const formHandler = async (event) => {
       }
     }
 
-    // Log details about the uploaded file
-    console.log(
-      `File uploaded: ${formData.file.filename}, Size: ${Buffer.byteLength(formData.file.content, 'utf8')} bytes`
-    )
-
-    // Add the file as system content (not for AI)
     const updatedChatHistory = formData.chatHistory || []
     updatedChatHistory.push({
       role: 'system',
@@ -55,13 +49,7 @@ const parseMultipartForm = (event) => {
         if (filenameMatch) {
           const filename = filenameMatch[1]
           const content = part.split('\r\n\r\n').slice(1).join('\r\n\r\n').trim()
-
-          // Log file details
-          console.log('File detected:', filename)
-
-          // Check file size during parsing
           const fileSize = Buffer.byteLength(content, 'utf8')
-          console.log('File size:', fileSize)
 
           if (fileSize > MAX_FILE_SIZE) {
             throw new Error(`File size exceeds the allowed limit of ${MAX_FILE_SIZE} bytes`)
@@ -71,16 +59,13 @@ const parseMultipartForm = (event) => {
         }
       } else if (part.includes('name="chatHistory"')) {
         const content = part.split('\r\n\r\n')[1].trim()
-        console.log('Chat history detected')
         result.chatHistory = JSON.parse(content)
       } else if (part.includes('name="aiOption"')) {
         const content = part.split('\r\n\r\n')[1].trim()
-        console.log('AI Option detected:', content)
         result.aiOption = content
       }
     })
   } catch (error) {
-    console.error('Error parsing multipart form:', error.message)
     throw new Error('Error parsing multipart form: ' + error.message)
   }
 
@@ -88,7 +73,6 @@ const parseMultipartForm = (event) => {
 }
 async function geminiChatCompletion(params) {
   const apiKey = process.env.GEMINI_API_KEY
-  console.log('Gemini API Key:', apiKey)
   if (!apiKey) {
     throw new Error('Missing GEMINI_API_KEY environment variable')
   }
@@ -102,8 +86,6 @@ async function geminiChatCompletion(params) {
     parts: [{ text: message.content }]
   }))
 
-  console.log('Google Chat:', googleChat)
-
   try {
     let responseText
 
@@ -115,12 +97,8 @@ async function geminiChatCompletion(params) {
       throw new Error('The latest message should be from the user.')
     }
 
-    // Use generateContent for generating responses after the user message
     const result = await textOnlyModel.generateContent(recentUserMessage.parts[0].text)
     const response = await result.response
-
-    // Log the result to understand the structure returned from Gemini
-    console.log('Gemini API result:', JSON.stringify(result, null, 2))
 
     responseText = response.text()
 
@@ -135,11 +113,6 @@ async function geminiChatCompletion(params) {
       role: message.role,
       content: message.parts[0].text
     }))
-
-    console.log(
-      'Transformed OpenAI-formatted Chat Object:',
-      JSON.stringify(openAIFormattedChat, null, 2)
-    )
 
     return openAIFormattedChat
   } catch (error) {

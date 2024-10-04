@@ -37,8 +37,6 @@ const handler = async (event) => {
       // Wait for the response from formatResponse before pushing it into chatHistory
       const response = await openai.chat.completions.create(params)
       chatHistory.push(response.choices[0].message)
-
-      console.log('Chat history:', chatHistory)
       return {
         statusCode: 200,
         body: JSON.stringify(chatHistory)

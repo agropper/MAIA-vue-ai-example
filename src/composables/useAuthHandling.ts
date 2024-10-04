@@ -114,9 +114,6 @@ async function saveToNosh(
 /**
  * Sends the query to AI.
  */
-/**
- * Sends the query to AI.
- */
 function sendQuery(appState: AppState, writeMessage: (message: string, type: string) => void) {
   appState.isLoading = true
   appState.activeQuestion = {
@@ -163,7 +160,6 @@ async function uploadFile(
     writeMessage('File is too large to upload.', 'error')
     return
   }
-  console.log('uploading file')
   appState.isLoading = true
   try {
     const formData = new FormData()
