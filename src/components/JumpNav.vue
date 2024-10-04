@@ -26,7 +26,11 @@ export default {
   methods: {
     navigate() {
       if (this.selectedUrl && this.selectedUrl !== window.location.pathname) {
-        window.location.href = this.selectedUrl
+        // Get the current query string (if any)
+        const queryString = window.location.search
+
+        // Navigate to the selected URL with the current query string appended
+        window.location.href = `${this.selectedUrl}${queryString}`
       }
     }
   }
