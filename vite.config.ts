@@ -15,8 +15,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'), // main page
-        gemini: resolve(__dirname, 'gemini/index.html') // gemini page
+        main: resolve(__dirname, 'index.html') // main page
       }
     }
   },

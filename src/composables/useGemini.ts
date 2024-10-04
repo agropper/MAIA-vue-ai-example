@@ -1,7 +1,7 @@
 import type { AppState } from '../types'
 import { postData } from '../utils'
 
-async function sendQuery(
+async function geminiQuery(
   appState: AppState,
   writeMessage: (message: string, type: string) => void
 ) {
@@ -37,4 +37,4 @@ async function sendQuery(
     }, 100)
   })
 }
-export { sendQuery }
+export { geminiQuery }

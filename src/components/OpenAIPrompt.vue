@@ -1,15 +1,16 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
-import { QFile, QIcon } from 'quasar'
+import { QFile, QIcon, QBtnToggle } from 'quasar'
 
 import { getSystemMessageType, pickFiles, convertJSONtoMarkdown } from '../utils'
 import { useChatState } from '../composables/useChatState'
 import ChatArea from './ChatArea.vue'
-import JumpNav from './JumpNav.vue'
 import BottomToolbar from './BottomToolbar.vue'
 
 import { showAuth, showJWT, saveToNosh, uploadFile } from '../composables/useAuthHandling'
 import { sendQuery } from '../composables/useOpenAI'
+import { geminiQuery } from '../composables/useGemini'
+
 import PopUp from './PopUp.vue'
 
 export default defineComponent({
@@ -20,7 +21,12 @@ export default defineComponent({
     QIcon,
     PopUp,
     ChatArea,
-    JumpNav
+    QBtnToggle
+  },
+  computed: {
+    placeholderText() {
+      return `Message ${this.appState.selectedAI}`
+    }
   },
   setup() {
     const { appState, writeMessage } = useChatState()
@@ -52,8 +58,11 @@ export default defineComponent({
     }
 
     const triggerSendQuery = async () => {
-      await sendQuery(appState, writeMessage)
-      // Handle result if needed, e.g., add to chat history or update UI
+      if (appState.selectedAI === 'Gemini') {
+        await geminiQuery(appState, writeMessage)
+      } else {
+        await sendQuery(appState, writeMessage)
+      }
     }
 
     const triggerUploadFile = async (file: File) => {
@@ -125,13 +134,36 @@ export default defineComponent({
   }
 })
 </script>
+
 <template>
+  <!-- AI Selection Toggle -->
+  <q-btn-toggle
+    v-if="appState.chatHistory.length === 0"
+    v-model="appState.selectedAI"
+    push
+    glossy
+    toggle-color="teal"
+    :options="[
+      { label: 'Chat GPT', value: 'chatGPT' },
+      { label: 'Gemini', value: 'Gemini' }
+    ]"
+  >
+  </q-btn-toggle>
+  <q-btn-toggle
+    v-if="appState.chatHistory.length > 0"
+    v-model="appState.selectedAI"
+    color="primary"
+    :options="[{ label: appState.selectedAI }]"
+  >
+  </q-btn-toggle>
+
+  <!-- File Upload -->
   <q-file v-model="appState.currentFile" filled counter multiple append @input="handleFileUpload">
     <template v-slot:prepend>
       <q-icon name="attach_file"></q-icon>
     </template>
   </q-file>
-  <jump-nav v-if="appState.chatHistory.length === 0"></jump-nav>
+
   <!-- Chat Area Component -->
   <ChatArea
     :appState="appState"
@@ -149,13 +181,17 @@ export default defineComponent({
     @get-system-message-type="getSystemMessageType"
   />
 
+  <!-- Bottom Toolbar -->
   <BottomToolbar
     :appState="appState"
     :pickFiles="pickFiles"
     :triggerSendQuery="triggerSendQuery"
     :triggerAuth="triggerAuth"
     :triggerJWT="triggerJWT"
+    :placeholderText="placeholderText"
   />
+
+  <!-- Popup for displaying system messages -->
   <PopUp
     ref="popupRef"
     :content="appState.popupContent"

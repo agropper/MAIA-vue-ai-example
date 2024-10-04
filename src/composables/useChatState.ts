@@ -58,7 +58,7 @@ export function useChatState() {
     access: access,
     currentQuery: '',
     currentFile: null,
-    geminiChat: null
+    selectedAI: 'chatGPT'
   })
 
   const writeMessage = (message: string, messageType: string) => {

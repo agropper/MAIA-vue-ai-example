@@ -32,4 +32,5 @@ export interface AppState {
   access: AccessObject[]
   currentQuery: string
   currentFile: File | null
+  selectedAI: string
 }
