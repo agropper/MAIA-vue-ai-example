@@ -1,7 +1,7 @@
 import type { AppState } from '../types'
 import { postData } from '../utils'
 
-function sendQuery(appState: AppState, writeMessage: (message: string, type: string) => void) {
+const sendQuery = (appState: AppState, writeMessage: (message: string, type: string) => void) => {
   appState.isLoading = true
   appState.activeQuestion = {
     role: 'user',

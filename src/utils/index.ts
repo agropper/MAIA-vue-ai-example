@@ -3,7 +3,7 @@ import type { ChatHistoryItem } from '../types'
 const MAX_SIZE = 2 * 1024 * 1024 // 2MB
 const TOKEN_LIMIT = 2048 // Adjust based on the model
 
-function validateFileSize(file: File) {
+const validateFileSize = (file: File) => {
   if (!file) {
     return false
   }
@@ -53,12 +53,12 @@ const convertJSONtoMarkdown = (json: ChatHistoryItem[], username: string): strin
   )
 }
 
-function estimateTokenCount(text: string) {
+const estimateTokenCount = (text: string) => {
   const averageTokenLength = 4 // Average length of a token in characters
   return Math.ceil(text.length / averageTokenLength)
 }
 
-function checkTimelineSize(timelineString: string) {
+const checkTimelineSize = (timelineString: string) => {
   const estimatedTokens = estimateTokenCount(timelineString)
   if (estimatedTokens > TOKEN_LIMIT) {
     return {
@@ -76,7 +76,7 @@ function checkTimelineSize(timelineString: string) {
   }
 }
 
-function truncateTimeline(timelineString: string): string {
+const truncateTimeline = (timelineString: string): string => {
   const lines = timelineString.split('\n')
   while (lines.length > 0) {
     const currentString = lines.join('\n')
@@ -84,10 +84,8 @@ function truncateTimeline(timelineString: string): string {
     if (estimatedTokens <= TOKEN_LIMIT) {
       return currentString
     }
-    // Remove lines from the beginning (oldest entries)
     lines.shift()
   }
-  // If all lines are removed and still over the limit (unlikely), return empty string
   return ''
 }
 const signatureContent = (username: string): string => {

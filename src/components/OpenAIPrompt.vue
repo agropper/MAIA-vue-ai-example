@@ -50,7 +50,7 @@ export default defineComponent({
     }
 
     const triggerJWT = (jwt: string) => {
-      showJWT(jwt, showPopup, closeSession, writeMessage, appState)
+      showJWT(jwt, writeMessage, appState)
     }
 
     const triggerSaveToNosh = async () => {

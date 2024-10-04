@@ -2,7 +2,7 @@ import { reactive, watch } from 'vue'
 
 import type { AppState } from '../types'
 
-export function useChatState() {
+const useChatState = () => {
   const localStorageKey = 'noshuri'
   const selectedAILocalStorageKey = 'selectedAI'
 
@@ -96,3 +96,4 @@ export function useChatState() {
     writeMessage
   }
 }
+export { useChatState }

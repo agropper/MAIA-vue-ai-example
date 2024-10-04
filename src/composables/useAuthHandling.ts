@@ -1,33 +1,17 @@
-import {
-  checkTimelineSize,
-  convertJSONtoMarkdown,
-  postData,
-  truncateTimeline,
-  validateFileSize
-} from '../utils'
+import { convertJSONtoMarkdown, postData, validateFileSize } from '../utils'
 
 import type { AppState } from '../types'
 
-/**
- * Confirms authorization to Trustee and updates the state.
- */
-function showAuth(appState: AppState, writeMessage: (message: string, type: string) => void) {
+const showAuth = (appState: AppState, writeMessage: (message: string, type: string) => void) => {
   appState.isAuthorized = true
   writeMessage('Authorized', 'success')
 }
 
-/**
- * Handles the download of the patient timeline when a JWT is received.
- *
- * @param {string} jwt - The JSON Web Token received for authorization
- */
-async function showJWT(
+const showJWT = async (
   jwt: string,
-  showPopup: () => void,
-  closeSession: () => void,
   writeMessage: (message: string, type: string) => void,
   appState: AppState
-) {
+) => {
   if (!appState.uri) {
     writeMessage('No URI found in Querystring or LocalStorage', 'error')
     return
@@ -48,21 +32,9 @@ async function showJWT(
     }
 
     let data = await response.text()
-    let timelineCheck = checkTimelineSize(data)
-    writeMessage('Checked inbound timeline size.', 'success')
-    /*
-    if (timelineCheck.error === true) {
-      data = truncateTimeline(data)
-      timelineCheck = checkTimelineSize(data)
 
-      if (timelineCheck.error === true) {
-        appState.popupContent = 'Timeline size is too large even after truncation.'
-        appState.popupContentFunction = closeSession
-        showPopup()
-        return
-      }
-    }
-*/
+    writeMessage('Checked inbound timeline size.', 'success')
+
     appState.chatHistory.push({
       role: 'system',
       content: 'timeline\n\nuploaded at ' + new Date().toLocaleString() + '\n\n' + data
@@ -77,15 +49,12 @@ async function showJWT(
   }
 }
 
-/**
- * Saves the chat transcript to Nosh.
- */
-async function saveToNosh(
+const saveToNosh = async (
   appState: AppState,
   writeMessage: (message: string, type: string) => void,
   showPopup: () => void,
   closeSession: () => void
-) {
+) => {
   appState.isLoading = true
   writeMessage('Saving to Nosh...', 'success')
   try {
@@ -111,51 +80,11 @@ async function saveToNosh(
   }
 }
 
-/**
- * Sends the query to AI.
- */
-function sendQuery(appState: AppState, writeMessage: (message: string, type: string) => void) {
-  appState.isLoading = true
-  appState.activeQuestion = {
-    role: 'user',
-    content: appState.currentQuery || ''
-  }
-
-  postData(appState.queryuri, {
-    chatHistory: appState.chatHistory,
-    newValue: appState.currentQuery
-  }).then((data) => {
-    if (!data || data.message) {
-      writeMessage(data ? data.message : 'Failed to get response from AI', 'error')
-      appState.isLoading = false
-      appState.activeQuestion = {
-        role: 'user',
-        content: ''
-      }
-      return
-    }
-    appState.isLoading = false
-    appState.activeQuestion = {
-      role: 'user',
-      content: ''
-    }
-    appState.chatHistory = data
-
-    appState.currentQuery = ''
-    setTimeout(() => {
-      window.scrollTo(0, document.body.scrollHeight)
-    }, 100)
-  })
-}
-
-/**
- * Handles file upload.
- */
-async function uploadFile(
+const uploadFile = async (
   file: File,
   appState: AppState,
   writeMessage: (message: string, type: string) => void
-) {
+) => {
   if (!validateFileSize(file)) {
     writeMessage('File is too large to upload.', 'error')
     return
@@ -186,4 +115,4 @@ async function uploadFile(
   }
 }
 
-export { showAuth, showJWT, saveToNosh, sendQuery, uploadFile }
+export { showAuth, showJWT, saveToNosh, uploadFile }

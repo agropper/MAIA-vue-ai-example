@@ -1,10 +1,10 @@
 import type { AppState } from '../types'
 import { postData } from '../utils'
 
-async function geminiQuery(
+const geminiQuery = async (
   appState: AppState,
   writeMessage: (message: string, type: string) => void
-) {
+) => {
   appState.isLoading = true
 
   appState.activeQuestion = {
