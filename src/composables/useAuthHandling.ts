@@ -50,7 +50,7 @@ async function showJWT(
     let data = await response.text()
     let timelineCheck = checkTimelineSize(data)
     writeMessage('Checked inbound timeline size.', 'success')
-
+    /*
     if (timelineCheck.error === true) {
       data = truncateTimeline(data)
       timelineCheck = checkTimelineSize(data)
@@ -62,7 +62,7 @@ async function showJWT(
         return
       }
     }
-
+*/
     appState.chatHistory.push({
       role: 'system',
       content: 'timeline\n\nuploaded at ' + new Date().toLocaleString() + '\n\n' + data
