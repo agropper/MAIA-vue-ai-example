@@ -153,7 +153,7 @@ export default defineComponent({
     v-if="appState.chatHistory.length > 0"
     v-model="appState.selectedAI"
     color="primary"
-    :options="[{ label: appState.selectedAI }]"
+    :options="[{ label: appState.selectedAI, value: appState.selectedAI }]"
   >
   </q-btn-toggle>
 

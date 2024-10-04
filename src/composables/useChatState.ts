@@ -1,8 +1,10 @@
+import { reactive, watch } from 'vue'
+
 import type { AppState } from '../types'
-import { reactive } from 'vue'
 
 export function useChatState() {
   const localStorageKey = 'noshuri'
+  const selectedAILocalStorageKey = 'selectedAI'
 
   let uri = ''
   let writeuri = ''
@@ -32,6 +34,10 @@ export function useChatState() {
     }
   ]
 
+  // Check if selectedAI is already set in localStorage
+  const selectedAIFromStorage =
+    typeof window !== 'undefined' ? localStorage.getItem(selectedAILocalStorageKey) : null
+
   const appState: AppState = reactive({
     chatHistory: [],
     editBox: [],
@@ -58,7 +64,7 @@ export function useChatState() {
     access: access,
     currentQuery: '',
     currentFile: null,
-    selectedAI: 'chatGPT'
+    selectedAI: selectedAIFromStorage || 'chatGPT' // Initialize from localStorage if available
   })
 
   const writeMessage = (message: string, messageType: string) => {
@@ -69,6 +75,16 @@ export function useChatState() {
       appState.isMessage = false
     }, 5000)
   }
+
+  // Watch for changes to selectedAI and store the value in localStorage
+  watch(
+    () => appState.selectedAI,
+    (newSelectedAI) => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(selectedAILocalStorageKey, newSelectedAI)
+      }
+    }
+  )
 
   // If no URI is found, write an error message
   if (!uri && typeof window !== 'undefined') {
