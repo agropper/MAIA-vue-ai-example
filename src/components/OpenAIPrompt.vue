@@ -145,6 +145,7 @@ export default defineComponent({
       { label: 'Chat GPT', value: 'chatGPT' },
       { label: 'Gemini', value: 'Gemini' }
     ]"
+    flat
   >
   </q-btn-toggle>
   <q-btn-toggle
@@ -152,6 +153,7 @@ export default defineComponent({
     v-model="appState.selectedAI"
     color="primary"
     :options="[{ label: appState.selectedAI, value: appState.selectedAI }]"
+    flat
   >
   </q-btn-toggle>
 
