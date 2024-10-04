@@ -140,9 +140,7 @@ export default defineComponent({
   <q-btn-toggle
     v-if="appState.chatHistory.length === 0"
     v-model="appState.selectedAI"
-    push
-    glossy
-    toggle-color="teal"
+    toggle-color="primary"
     :options="[
       { label: 'Chat GPT', value: 'chatGPT' },
       { label: 'Gemini', value: 'Gemini' }
