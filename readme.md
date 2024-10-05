@@ -17,61 +17,9 @@ The MAIA App requires the following environment variables:
 - `VITE_ORG_ID`: App ID. Can be any value.
 - `VITE_PROJECT_ID`: Project ID. Can be any value.
 - `VITE_OPENAI_API_KEY`: Your OpenAI API key.
+- `GEMINI_API_KEY`: Your Gemini API key.
 
 Make sure to set these variables before running the MAIA App.
-
-## Challenge Instructions
-
-### Register for Challenge
-
-1. Register using the [registration form](https://pages.pathcheck.org/patient-journey-challenge).
-   This step is necessary to participate in the challenge and receive updates.
-
-### Set up a patient record
-
-1. Visit [trustee.health](https://trustee.health).
-   This is the primary interface for managing your health data securely.
-
-2. Enter your email address and click the "New to Trustee" link.
-   This initiates the process of creating your Trustee account.
-
-3. Verify your email address.
-   You will receive a verf
-
-4. Create a passkey for login.
-   Passkeys provide a secure, passwordless login method.
-
-   - For Mac users: Passkeys are natively supported.
-   - For Windows users: Follow the instructions [here](https://support.microsoft.com/en-us/account-billing/signing-in-with-a-passkey-09a49a86-ca47-406c-8acc-ed0e3c852c6d) to set up and use passkeys.
-
-5. Receive link to NOSH record in email.
-   After setting up your Trustee account, you'll receive an email with a link to access your NOSH record.
-
-6. Click to access NOSH record.
-   This will take you to your personal health record interface.
-
-7. Click the Sync button (two circular arrows) and select one of the Synthetic Mass patients to import into NOSH.
-   This step populates your record with sample health data for testing purposes.
-   ![Sync button](https://github.com/abeuscher/vue-ai-example/blob/main/public/ss-1.png)
-
-   ![Select Synthetic Record](https://github.com/abeuscher/vue-ai-example/blob/main/public/ss-4.png)
-
-8. Click the Import Everything button (two up/down arrows) to add the contents to your health records Timeline.
-   This action imports all available data from the selected Synthetic Mass patient into your Timeline.
-   ![Import button](https://github.com/abeuscher/vue-ai-example/blob/main/public/ss-2.png)
-
-### Try MAIA
-
-1. Select "Launch MAIA" from side menu.
-   This option is located in the main navigation menu of your NOSH interface.
-
-   ![Launch MAIA](https://github.com/abeuscher/vue-ai-example/blob/main/public/ss-3.png)
-
-2. Log into Trustee from MAIA.
-   You'll need to authenticate again to ensure secure access to your health data.
-
-3. Ask AI some questions about your Patient Timeline.
-   Explore the capabilities of the AI by asking questions related to the imported health data.
 
 ### Troubleshooting
 
@@ -91,25 +39,6 @@ This should help the app to relaunch properly from NOSH.
    This step enables you to integrate your custom MAIA version with the NOSH system for testing. Note: This change is made locally, so if you want to test on a separate machine, you will need to edit the MAIA url there as well. The data is saved to localStorage.
 
    ![Change MAIA URL](https://github.com/abeuscher/vue-ai-example/blob/main/public/ss-5.jpg)
-
-## Participation Guidelines
-
-1. Hosting: The MAIA app can be hosted for free on platforms like Netlify. Any similar host that can securely store secrets (like API keys) will work.
-
-2. Local Testing:
-
-   - You can test your submission locally by attaching markdown files in place of full timelines. This feature is accessible via the paperclip icon to the left of the chat box in the MAIA interface.
-   - For a wider dataset, you can download a timeline locally from the current MAIA and use that for local testing.
-
-3. Development:
-   - Fork the MAIA code or use your own approach with the API endpoints available from the NOSH record.
-   - To customize, edit the MAIA URL that opens from your EHR in your user settings in the NOSH interface.
-
-## Important Notes
-
-- The signup process for a patient (user) record takes approximately 5 minutes.
-- Synthetic Mass patients contain realistic but synthetic health data for testing and development purposes.
-- Ensure you follow all security and privacy best practices when handling health data, even if synthetic.
 
 ## Resources
 
