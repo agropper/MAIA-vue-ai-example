@@ -11,6 +11,7 @@ import { showAuth, showJWT, saveToNosh, uploadFile } from '../composables/useAut
 import { sendQuery } from '../composables/useOpenAI'
 import { geminiQuery } from '../composables/useGemini'
 import { mistralQuery } from '../composables/useMistral'
+
 import PopUp from './PopUp.vue'
 
 export default defineComponent({
