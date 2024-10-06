@@ -58,14 +58,11 @@ const useChatState = () => {
     },
     uri: uri,
     writeuri: writeuri,
-    queryuri: '/.netlify/functions/open-ai-chat',
-    geminiuri: '/.netlify/functions/gemini-chat',
-    mistraluri: '/.netlify/functions/mistral-chat',
     localStorageKey: localStorageKey,
     access: access,
     currentQuery: '',
     currentFile: null,
-    selectedAI: selectedAIFromStorage || 'chatGPT' // Initialize from localStorage if available
+    selectedAI: selectedAIFromStorage || '/.netlify/functions/open-ai-chat' // Initialize from localStorage if available
   })
 
   const writeMessage = (message: string, messageType: string) => {

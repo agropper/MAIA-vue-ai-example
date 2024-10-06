@@ -118,7 +118,7 @@ const uploadFile = async (
     const formData = new FormData()
     formData.append('file', file)
     formData.append('chatHistory', JSON.stringify(appState.chatHistory))
-    const response = await fetch(appState.queryuri, {
+    const response = await fetch(appState.selectedAI, {
       method: 'POST',
       body: formData
     })

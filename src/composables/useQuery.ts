@@ -1,14 +1,18 @@
 import type { AppState } from '../types'
 import { postData } from '../utils'
 
-const sendQuery = (appState: AppState, writeMessage: (message: string, type: string) => void) => {
+const sendQuery = (
+  appState: AppState,
+  writeMessage: (message: string, type: string) => void,
+  uri: string
+) => {
   appState.isLoading = true
   appState.activeQuestion = {
     role: 'user',
     content: appState.currentQuery || ''
   }
 
-  postData(appState.queryuri, {
+  postData(uri, {
     chatHistory: appState.chatHistory,
     newValue: appState.currentQuery
   }).then((data) => {

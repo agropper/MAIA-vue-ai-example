@@ -8,11 +8,16 @@ import ChatArea from './ChatArea.vue'
 import BottomToolbar from './BottomToolbar.vue'
 
 import { showAuth, showJWT, saveToNosh, uploadFile } from '../composables/useAuthHandling'
-import { sendQuery } from '../composables/useOpenAI'
-import { geminiQuery } from '../composables/useGemini'
-import { mistralQuery } from '../composables/useMistral'
+import { sendQuery } from '../composables/useQuery'
 
 import PopUp from './PopUp.vue'
+
+const AIoptions = [
+  { label: 'Chat GPT', value: '/.netlify/functions/open-ai-chat' },
+  { label: 'Gemini', value: '/.netlify/functions/gemini-chat' },
+  { label: 'Mistral', value: '/.netlify/functions/mistral-chat' },
+  { label: 'Together', value: '/.netlify/functions/together-chat' }
+]
 
 export default defineComponent({
   name: 'ChatPrompt',
@@ -59,14 +64,7 @@ export default defineComponent({
     }
 
     const triggerSendQuery = async () => {
-      if (appState.selectedAI === 'Gemini') {
-        await geminiQuery(appState, writeMessage)
-      } else if (appState.selectedAI === 'Mistral') {
-        console.log('Mistral')
-        await mistralQuery(appState, writeMessage)
-      } else {
-        await sendQuery(appState, writeMessage)
-      }
+      await sendQuery(appState, writeMessage, appState.selectedAI)
     }
 
     const triggerUploadFile = async (file: File) => {
@@ -133,7 +131,8 @@ export default defineComponent({
       closeSession,
       getSystemMessageType,
       pickFiles,
-      convertJSONtoMarkdown
+      convertJSONtoMarkdown,
+      AIoptions
     }
   }
 })
@@ -145,18 +144,18 @@ export default defineComponent({
     v-if="appState.chatHistory.length === 0"
     v-model="appState.selectedAI"
     toggle-color="primary"
-    :options="[
-      { label: 'Chat GPT', value: 'chatGPT' },
-      { label: 'Gemini', value: 'Gemini' },
-      { label: 'Mistral', value: 'Mistral' }
-    ]"
+    :options="AIoptions"
   >
   </q-btn-toggle>
   <q-btn-toggle
     v-if="appState.chatHistory.length > 0"
     v-model="appState.selectedAI"
     color="primary"
-    :options="[{ label: appState.selectedAI, value: appState.selectedAI }]"
+    :options="
+      AIoptions.find((option) => option.value === appState.selectedAI)
+        ? [AIoptions.find((option) => option.value === appState.selectedAI)]
+        : []
+    "
   >
   </q-btn-toggle>
 

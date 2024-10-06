@@ -26,9 +26,6 @@ export interface AppState {
   activeQuestion: OpenAI.Chat.ChatCompletionMessageParam
   uri: string
   writeuri: string
-  queryuri: string
-  geminiuri: string
-  mistraluri: string
   localStorageKey: string
   access: AccessObject[]
   currentQuery: string
