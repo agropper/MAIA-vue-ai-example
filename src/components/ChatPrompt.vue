@@ -31,7 +31,7 @@ export default defineComponent({
   },
   computed: {
     placeholderText() {
-      return `Message ${this.appState.selectedAI}`
+      return `Message ${this.AIoptions.find((option) => option.value === this.appState.selectedAI)?.label}`
     }
   },
   setup() {
