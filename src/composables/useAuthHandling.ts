@@ -15,7 +15,9 @@ const showAuth = (appState: AppState, writeMessage: (message: string, type: stri
 const showJWT = async (
   jwt: string,
   writeMessage: (message: string, type: string) => void,
-  appState: AppState
+  appState: AppState,
+  closeSession: () => void,
+  showPopup: () => void
 ) => {
   if (!appState.uri) {
     writeMessage('No URI found in Querystring or LocalStorage', 'error')
@@ -47,8 +49,8 @@ const showJWT = async (
 
       if (timelineCheck.error === true) {
         console.log('Timeline size error after truncation. Clearing session.', data)
-        appState.popupContent.value = 'Timeline size is too large even after truncation.'
-        appState.popupContentFunction.value = closeSession
+        appState.popupContent = 'Timeline size is too large even after truncation.'
+        appState.popupContentFunction = closeSession
         showPopup()
         return
       } else {

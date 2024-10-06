@@ -28,6 +28,7 @@ export interface AppState {
   writeuri: string
   queryuri: string
   geminiuri: string
+  mistraluri: string
   localStorageKey: string
   access: AccessObject[]
   currentQuery: string

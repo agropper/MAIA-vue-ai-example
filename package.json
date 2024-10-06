@@ -13,7 +13,9 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.28.0",
     "@google/generative-ai": "^0.20.0",
+    "@mistralai/mistralai": "^1.1.0",
     "@quasar/extras": "^1.16.12",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.2",

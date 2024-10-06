@@ -60,6 +60,7 @@ const useChatState = () => {
     writeuri: writeuri,
     queryuri: '/.netlify/functions/open-ai-chat',
     geminiuri: '/.netlify/functions/gemini-chat',
+    mistraluri: '/.netlify/functions/mistral-chat',
     localStorageKey: localStorageKey,
     access: access,
     currentQuery: '',

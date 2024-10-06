@@ -10,11 +10,11 @@ import BottomToolbar from './BottomToolbar.vue'
 import { showAuth, showJWT, saveToNosh, uploadFile } from '../composables/useAuthHandling'
 import { sendQuery } from '../composables/useOpenAI'
 import { geminiQuery } from '../composables/useGemini'
-
+import { mistralQuery } from '../composables/useMistral'
 import PopUp from './PopUp.vue'
 
 export default defineComponent({
-  name: 'OpenAIPrompt',
+  name: 'ChatPrompt',
   components: {
     BottomToolbar,
     QFile,
@@ -50,7 +50,7 @@ export default defineComponent({
     }
 
     const triggerJWT = (jwt: string) => {
-      showJWT(jwt, writeMessage, appState)
+      showJWT(jwt, writeMessage, appState, closeSession, showPopup)
     }
 
     const triggerSaveToNosh = async () => {
@@ -60,6 +60,9 @@ export default defineComponent({
     const triggerSendQuery = async () => {
       if (appState.selectedAI === 'Gemini') {
         await geminiQuery(appState, writeMessage)
+      } else if (appState.selectedAI === 'Mistral') {
+        console.log('Mistral')
+        await mistralQuery(appState, writeMessage)
       } else {
         await sendQuery(appState, writeMessage)
       }
@@ -143,7 +146,8 @@ export default defineComponent({
     toggle-color="primary"
     :options="[
       { label: 'Chat GPT', value: 'chatGPT' },
-      { label: 'Gemini', value: 'Gemini' }
+      { label: 'Gemini', value: 'Gemini' },
+      { label: 'Mistral', value: 'Mistral' }
     ]"
   >
   </q-btn-toggle>

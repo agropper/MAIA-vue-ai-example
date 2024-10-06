@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import OpenAIPrompt from '../components/OpenAIPrompt.vue'
+import ChatPrompt from '../components/ChatPrompt.vue'
 </script>
 
 <template>
   <div class="wrapper">
-    <OpenAIPrompt />
+    <ChatPrompt />
   </div>
 </template>
