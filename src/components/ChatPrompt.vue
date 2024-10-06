@@ -32,6 +32,11 @@ export default defineComponent({
   computed: {
     placeholderText() {
       return `Message ${this.AIoptions.find((option) => option.value === this.appState.selectedAI)?.label}`
+    },
+    aiOption() {
+      return this.AIoptions.filter((option) => option.value === this.appState.selectedAI)
+        ? this.AIoptions.filter((option) => option.value === this.appState.selectedAI)
+        : [this.AIoptions[0]]
     }
   },
   setup() {
@@ -151,11 +156,7 @@ export default defineComponent({
     v-if="appState.chatHistory.length > 0"
     v-model="appState.selectedAI"
     color="primary"
-    :options="
-      AIoptions.find((option) => option.value === appState.selectedAI)
-        ? [AIoptions.find((option) => option.value === appState.selectedAI)]
-        : []
-    "
+    :options="aiOption"
   >
   </q-btn-toggle>
 
