@@ -25,6 +25,7 @@
     "vue": "^3.4.38",
     "vue-markdown-render": "^2.2.1",
     "vue-router": "^4.4.3",
+    "vue-tsc": "^2.1.6",
     "vue3-gnap": "^1.0.17"
   },
   "devDependencies": {
