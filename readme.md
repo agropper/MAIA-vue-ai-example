@@ -9,6 +9,9 @@ The primary purpose of this demo is to illustrate how a suite of open-source sof
 ## Prerequisites
 
 - An OpenAI API key (obtainable for free at [OpenAI's website](https://openai.com))
+- A Gemini API key (obtainable for free at [Gemini's website](https://ai.google.dev))
+- A Mistral API key (obtainable for free at [Mistral's website](https://docs.mistral.ai))
+- A Together API key (obtainable for free at [Together's website](https://together.ai))
 
 ## Environment Variables
 
@@ -18,6 +21,8 @@ The MAIA App requires the following environment variables:
 - `VITE_PROJECT_ID`: Project ID. Can be any value.
 - `VITE_OPENAI_API_KEY`: Your OpenAI API key.
 - `GEMINI_API_KEY`: Your Gemini API key.
+- `MISTRAL_API_KEY`: Your Mistral API key.
+- `TOGETHER_API_KEY`: Your Together API key.
 
 Make sure to set these variables before running the MAIA App.
 
