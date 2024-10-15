@@ -35,6 +35,7 @@ const showJWT = async (
     })
 
     if (!response.ok) {
+      closeSession()
       throw new Error('Failed to fetch')
     }
 
