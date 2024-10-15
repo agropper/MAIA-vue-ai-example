@@ -35,8 +35,10 @@ const showJWT = async (
     })
 
     if (!response.ok) {
-      closeSession()
-      throw new Error('Failed to fetch')
+      appState.popupContent =
+        'Fatal Error. Failed to load patient timeline. Close this window and restart session.'
+      appState.popupContentFunction = closeSession
+      showPopup()
     }
 
     let data = await response.text()
