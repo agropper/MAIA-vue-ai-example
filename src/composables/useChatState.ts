@@ -66,6 +66,7 @@ const useChatState = () => {
   })
 
   const writeMessage = (message: string, messageType: string) => {
+    console.log(message)
     appState.message = message
     appState.messageType = messageType
     appState.isMessage = true
