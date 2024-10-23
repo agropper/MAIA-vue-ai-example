@@ -66,7 +66,6 @@ const useChatState = () => {
   })
 
   const writeMessage = (message: string, messageType: string) => {
-    console.log(message)
     appState.message = message
     appState.messageType = messageType
     appState.isMessage = true
@@ -94,7 +93,7 @@ const useChatState = () => {
   const clearLocalStorageKeys = () => {
     localStorage.removeItem(localStorageKey)
     localStorage.removeItem(selectedAILocalStorageKey)
-    console.log('Local Storage cleared.')
+    console.log('Specific local storage keys cleared: noshuri, selectedAI')
   }
 
   // Handle key combination for clearing storage

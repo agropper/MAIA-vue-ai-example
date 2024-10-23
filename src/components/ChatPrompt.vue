@@ -133,7 +133,7 @@ export default defineComponent({
       saveToFile,
       closeNoSave,
       closeSession,
-      clearLocalStorageKeys, // Pass this to BottomToolbar
+      clearLocalStorageKeys,
       getSystemMessageType,
       pickFiles,
       convertJSONtoMarkdown,

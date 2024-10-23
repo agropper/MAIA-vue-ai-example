@@ -1,9 +1,4 @@
-import {
-  checkTimelineSize,
-  convertJSONtoMarkdown,
-  truncateTimeline,
-  validateFileSize
-} from '../utils'
+import { convertJSONtoMarkdown, postData, validateFileSize } from '../utils'
 
 import type { AppState } from '../types'
 
@@ -39,36 +34,19 @@ const showJWT = async (
         'Fatal Error. Failed to load patient timeline. Close this window and restart session.'
       appState.popupContentFunction = closeSession
       showPopup()
+      return
     }
 
-    let data = await response.text()
-    let timelineCheck = checkTimelineSize(data)
-    writeMessage('Checked inbound timeline size. ' + timelineCheck.message, 'success')
-    if (timelineCheck.error === true) {
-      console.log('Timeline size error. Truncating timeline.', data)
-      // Truncate the timeline to fit within the token limit
-      data = truncateTimeline(data)
-      timelineCheck = checkTimelineSize(data)
+    const data = await response.text()
 
-      if (timelineCheck.error === true) {
-        console.log('Timeline size error after truncation. Clearing session.', data)
-        appState.popupContent = 'Timeline size is too large even after truncation.'
-        appState.popupContentFunction = closeSession
-        showPopup()
-        return
-      } else {
-        writeMessage('Timeline was truncated to fit within limits.', 'warning')
-      }
-    }
-    writeMessage('Checked inbound timeline size.', 'success')
-
+    // Make the timeline visible immediately
     appState.chatHistory.push({
       role: 'system',
-      content: 'timeline\n\nuploaded at ' + new Date().toLocaleString() + '\n\n' + data
+      content: 'timeline\n\n' + data // Add timeline to chatHistory for immediate visibility
     })
 
+    writeMessage('Patient Timeline Loaded and Visible', 'success')
     appState.isLoading = false
-    writeMessage('Patient Timeline Loaded', 'success')
   } catch (error: any) {
     writeMessage(`Error: ${error.message}`, 'error')
   } finally {

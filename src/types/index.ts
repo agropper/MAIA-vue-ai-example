@@ -31,4 +31,5 @@ export interface AppState {
   currentQuery: string
   currentFile: File | null
   selectedAI: string
+  timeline: string
 }
