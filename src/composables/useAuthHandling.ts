@@ -44,6 +44,7 @@ const showJWT = async (
       role: 'system',
       content: 'timeline\n\n' + data // Add timeline to chatHistory for immediate visibility
     })
+    appState.timeline = data
 
     writeMessage('Patient Timeline Loaded and Visible', 'success')
     appState.isLoading = false

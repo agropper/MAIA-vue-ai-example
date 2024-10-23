@@ -62,7 +62,8 @@ const useChatState = () => {
     access: access,
     currentQuery: '',
     currentFile: null,
-    selectedAI: selectedAIFromStorage || '/.netlify/functions/open-ai-chat' // Initialize from localStorage if available
+    selectedAI: selectedAIFromStorage || '/.netlify/functions/open-ai-chat',
+    timeline: ''
   })
 
   const writeMessage = (message: string, messageType: string) => {

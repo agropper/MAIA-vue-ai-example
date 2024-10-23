@@ -19,7 +19,8 @@ const sendQuery = (
   // Even if newValue (currentQuery) is empty, send the chatHistory that contains the timeline
   postData(uri, {
     chatHistory: appState.chatHistory,
-    newValue: appState.currentQuery || '' // Make sure to always send something here, even if it's an empty string
+    newValue: appState.currentQuery || '',
+    timeline: appState.timeline
   }).then((data) => {
     if (!data || data.message) {
       writeMessage(data ? data.message : 'Failed to get response from AI', 'error')

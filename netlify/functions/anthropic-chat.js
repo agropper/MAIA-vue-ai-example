@@ -60,7 +60,7 @@ const handler = async (event) => {
   } else {
     try {
       let { chatHistory, newValue, timeline } = JSON.parse(event.body)
-
+      chatHistory = chatHistory.filter((message) => message.role !== 'system')
       // Log incoming data
       console.log('Received chatHistory:', JSON.stringify(chatHistory, null, 2))
       console.log('Received newValue:', newValue)
@@ -72,25 +72,30 @@ const handler = async (event) => {
         content: newValue
       })
 
-      // Only add the timeline to the chatHistory after the user submits a query
+      // Log chatHistory after appending
+      console.log('Updated chatHistory:', JSON.stringify(chatHistory, null, 2))
+
+      let params = {
+        messages: chatHistory,
+        max_tokens: TOKEN_LIMIT,
+        model: 'claude-3-5-sonnet-20241022'
+      }
       if (timeline) {
-        chatHistory.push({
+        params = Object.assign(params, { system: timeline })
+      }
+      console.log(params)
+      const response = await anthropic.messages.create(params)
+
+      chatHistory.push({ role: 'assistant', content: response.content[0].text })
+      // Log final chatHistory before returning
+
+      if (timeline) {
+        chatHistory.unshift({
           role: 'system',
           content: 'timeline\n\n' + timeline
         })
       }
 
-      // Log chatHistory after appending
-      console.log('Updated chatHistory:', JSON.stringify(chatHistory, null, 2))
-
-      const params = {
-        messages: chatHistory,
-        max_tokens: TOKEN_LIMIT,
-        model: 'claude-3-5-sonnet-20241022'
-      }
-      const response = await anthropic.messages.create(params)
-      chatHistory.push({ role: 'assistant', content: response.content[0].text })
-      // Log final chatHistory before returning
       console.log('Final chatHistory before return:', JSON.stringify(response, null, 2))
 
       return {
