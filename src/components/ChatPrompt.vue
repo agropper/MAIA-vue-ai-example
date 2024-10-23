@@ -40,7 +40,7 @@ export default defineComponent({
     }
   },
   setup() {
-    const { appState, writeMessage } = useChatState()
+    const { appState, writeMessage, clearLocalStorageKeys } = useChatState() // Import clearLocalStorageKeys from useChatState
     const localStorageKey = 'noshuri'
     const popupRef = ref<InstanceType<typeof PopUp> | null>(null)
 
@@ -76,7 +76,6 @@ export default defineComponent({
       await uploadFile(file, appState, writeMessage)
     }
 
-    // Usage example for file upload
     const handleFileUpload = (event: Event) => {
       const files = (event.target as HTMLInputElement).files
       if (files && files.length > 0) {
@@ -134,6 +133,7 @@ export default defineComponent({
       saveToFile,
       closeNoSave,
       closeSession,
+      clearLocalStorageKeys, // Pass this to BottomToolbar
       getSystemMessageType,
       pickFiles,
       convertJSONtoMarkdown,
@@ -192,6 +192,7 @@ export default defineComponent({
     :triggerAuth="triggerAuth"
     :triggerJWT="triggerJWT"
     :placeholderText="placeholderText"
+    :clearLocalStorageKeys="clearLocalStorageKeys"
   />
 
   <!-- Popup for displaying system messages -->

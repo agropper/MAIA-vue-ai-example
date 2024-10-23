@@ -1,4 +1,4 @@
-import { reactive, watch } from 'vue'
+import { onMounted, onUnmounted, reactive, watch } from 'vue'
 
 import type { AppState } from '../types'
 
@@ -66,6 +66,7 @@ const useChatState = () => {
   })
 
   const writeMessage = (message: string, messageType: string) => {
+    console.log(message)
     appState.message = message
     appState.messageType = messageType
     appState.isMessage = true
@@ -89,9 +90,33 @@ const useChatState = () => {
     writeMessage('No URI found in Querystring or LocalStorage', 'error')
   }
 
+  // Function to clear specific local storage keys
+  const clearLocalStorageKeys = () => {
+    localStorage.removeItem(localStorageKey)
+    localStorage.removeItem(selectedAILocalStorageKey)
+    console.log('Local Storage cleared.')
+  }
+
+  // Handle key combination for clearing storage
+  const handleKeyCombination = (event: KeyboardEvent) => {
+    if (event.ctrlKey && event.altKey && event.key === 'c') {
+      clearLocalStorageKeys()
+    }
+  }
+
+  // Add keydown listener on mount and remove on unmount
+  onMounted(() => {
+    window.addEventListener('keydown', handleKeyCombination)
+  })
+
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyCombination)
+  })
+
   return {
     appState,
     writeMessage
   }
 }
+
 export { useChatState }
