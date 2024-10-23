@@ -6,6 +6,7 @@
       </q-card-section>
       <q-card-actions align="right">
         <q-btn :label="buttonText" color="primary" @click="closePopup" />
+        <q-btn label="Copy" color="secondary" @click="copyToClipboard" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -14,12 +15,6 @@
 <script lang="ts">
 import { QDialog, QCard, QCardSection, QCardActions, QBtn } from 'quasar'
 import VueMarkdown from 'vue-markdown-render'
-
-interface PopupProps {
-  content: string
-  onClose?: () => void
-  buttonText?: string
-}
 
 export default {
   name: 'PopupComponent',
@@ -57,6 +52,25 @@ export default {
     closePopup() {
       this.isVisible = false
       this.onClose()
+    },
+    copyToClipboard() {
+      navigator.clipboard
+        .writeText(this.content)
+        .then(() => {
+          this.$q.notify({
+            message: 'Content copied to clipboard',
+            color: 'green',
+            position: 'top'
+          })
+        })
+        .catch((err) => {
+          this.$q.notify({
+            message: 'Failed to copy content',
+            color: 'red',
+            position: 'top'
+          })
+          console.error('Error copying content to clipboard: ', err)
+        })
     }
   }
 }
