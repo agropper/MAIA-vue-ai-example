@@ -62,12 +62,6 @@ const handler = async (event) => {
   } else {
     try {
       let { chatHistory, newValue, timeline } = JSON.parse(event.body)
-
-      // Log incoming data
-      console.log('Received chatHistory:', JSON.stringify(chatHistory, null, 2))
-      console.log('Received newValue:', newValue)
-      console.log('Received timeline:', timeline ? 'Timeline present' : 'No timeline')
-
       // Append the user's question to chatHistory
       chatHistory.push({
         role: 'user',
@@ -82,14 +76,8 @@ const handler = async (event) => {
         })
       }
 
-      // Log chatHistory after appending
-      console.log('Updated chatHistory:', JSON.stringify(chatHistory, null, 2))
-
       // Estimate the size of the chat history and break it into chunks if needed
       const chunks = chunkMessages(chatHistory, TOKEN_LIMIT)
-
-      // Log the created chunks
-      console.log('Created chunks:', JSON.stringify(chunks, null, 2))
 
       let allResponses = []
 
@@ -100,11 +88,7 @@ const handler = async (event) => {
           model: 'gpt-4'
         }
 
-        console.log('Sending chunk to OpenAI:', JSON.stringify(params, null, 2))
-
         const response = await openai.chat.completions.create(params)
-
-        console.log('Received response from OpenAI:', JSON.stringify(response, null, 2))
 
         allResponses.push(response.choices[0].message)
       }
@@ -113,9 +97,6 @@ const handler = async (event) => {
       allResponses.forEach((responseMessage) => {
         chatHistory.push(responseMessage)
       })
-
-      // Log final chatHistory before returning
-      console.log('Final chatHistory before return:', JSON.stringify(chatHistory, null, 2))
 
       return {
         statusCode: 200,

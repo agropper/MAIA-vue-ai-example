@@ -62,7 +62,7 @@ const useChatState = () => {
     access: access,
     currentQuery: '',
     currentFile: null,
-    selectedAI: selectedAIFromStorage || '/.netlify/functions/open-ai-chat',
+    selectedAI: selectedAIFromStorage || '/.netlify/functions/anthropic-chat',
     timeline: ''
   })
 
@@ -95,7 +95,7 @@ const useChatState = () => {
   const clearLocalStorageKeys = () => {
     localStorage.removeItem(localStorageKey)
     localStorage.removeItem(selectedAILocalStorageKey)
-    console.log('Specific local storage keys cleared: noshuri, selectedAI')
+    console.log('Local Storage Keys Cleared')
   }
 
   // Handle key combination for clearing storage
@@ -116,7 +116,8 @@ const useChatState = () => {
 
   return {
     appState,
-    writeMessage
+    writeMessage,
+    clearLocalStorageKeys
   }
 }
 

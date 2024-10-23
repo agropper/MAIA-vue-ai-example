@@ -1,13 +1,14 @@
 <template>
   <q-dialog v-model="isVisible">
     <q-card>
-      <q-card-section>
-        <VueMarkdown :source="content" class="popup-text" />
-      </q-card-section>
       <q-card-actions align="right">
         <q-btn :label="buttonText" color="primary" @click="closePopup" />
         <q-btn label="Copy" color="secondary" @click="copyToClipboard" />
+        <q-btn label="Save Locally" color="secondary" @click="saveMarkdown" />
       </q-card-actions>
+      <q-card-section>
+        <VueMarkdown :source="content" class="popup-text" />
+      </q-card-section>
     </q-card>
   </q-dialog>
 </template>
@@ -52,6 +53,23 @@ export default {
     closePopup() {
       this.isVisible = false
       this.onClose()
+    },
+    saveMarkdown() {
+      const blob = new Blob([this.content], {
+        type: 'text/markdown'
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const currentDate = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      a.href = url
+      a.download = 'timeline-' + currentDate + '.md'
+      a.click()
+      URL.revokeObjectURL(url)
+      this.$q.notify({
+        message: 'Content Saved to Markdown File',
+        color: 'green',
+        position: 'top'
+      })
     },
     copyToClipboard() {
       navigator.clipboard

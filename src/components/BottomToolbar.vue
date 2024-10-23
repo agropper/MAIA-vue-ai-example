@@ -38,6 +38,7 @@ import { defineComponent } from 'vue'
 import type { PropType } from 'vue'
 import { QBtn, QInput, QCircularProgress } from 'quasar'
 import { GNAP } from 'vue3-gnap'
+import type { AppState } from '../types'
 
 export default defineComponent({
   name: 'BottomToolbar',
@@ -49,15 +50,7 @@ export default defineComponent({
   },
   props: {
     appState: {
-      type: Object as PropType<{
-        currentQuery: string
-        messageType: string
-        isMessage: boolean
-        message: string
-        isLoading: boolean
-        access: any[]
-        isAuthorized: boolean
-      }>,
+      type: Object as PropType<AppState>,
       required: true
     },
     pickFiles: {
@@ -78,7 +71,7 @@ export default defineComponent({
     },
     placeholderText: {
       type: String,
-      default: 'Message Chat GPT',
+      default: 'Message Anthropic',
       required: false
     }
   }

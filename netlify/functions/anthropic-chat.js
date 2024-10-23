@@ -11,39 +11,32 @@ const anthropic = new Anthropic({
 // Define token limit for the model
 const TOKEN_LIMIT = 8192
 
-const estimateTokenCount = (text) => {
-  const averageTokenLength = 4 // Average length of a token in characters
-  return Math.ceil(text.length / averageTokenLength)
-}
+const extractSystemMessages = (messages) => {
+  let systemContent = []
+  let tempStorage = []
 
-const chunkMessages = (messages, tokenLimit) => {
-  const chunks = []
-  let currentChunk = []
-  let currentTokens = 0
-
-  messages.forEach((message) => {
-    const messageTokenCount = estimateTokenCount(message.content)
-
-    // If adding this message would exceed the token limit, start a new chunk
-    if (currentTokens + messageTokenCount > tokenLimit) {
-      // Only push the current chunk if it's not empty
-      if (currentChunk.length > 0) {
-        chunks.push(currentChunk)
-      }
-      currentChunk = []
-      currentTokens = 0
+  // Extract 'system' role contents and remove them from the original array
+  const filteredMessages = messages.filter((message, index) => {
+    if (message.role === 'system') {
+      tempStorage.push({ index, content: message.content })
+      systemContent.push(message.content)
+      return false // Remove 'system' role messages
     }
-
-    currentChunk.push(message)
-    currentTokens += messageTokenCount
+    return true
   })
 
-  // Add the last chunk if not empty
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk)
-  }
+  // Concatenate system contents into a single string
+  const systemContext = systemContent.join('\n')
 
-  return chunks
+  return { filteredMessages, systemContext, tempStorage }
+}
+
+const restoreSystemMessages = (messages, tempStorage) => {
+  tempStorage.forEach((item) => {
+    messages.splice(item.index, 0, { role: 'system', content: item.content })
+  })
+
+  return messages
 }
 
 const handler = async (event) => {
@@ -59,48 +52,33 @@ const handler = async (event) => {
     return response
   } else {
     try {
-      let { chatHistory, newValue, timeline } = JSON.parse(event.body)
-      chatHistory = chatHistory.filter((message) => message.role !== 'system')
-      // Log incoming data
-      console.log('Received chatHistory:', JSON.stringify(chatHistory, null, 2))
-      console.log('Received newValue:', newValue)
-      console.log('Received timeline:', timeline ? 'Timeline present' : 'No timeline')
+      let { chatHistory, newValue } = JSON.parse(event.body)
 
-      // Append the user's question to chatHistory
-      chatHistory.push({
+      // Step 1: Extract system messages and concatenate content
+      const { filteredMessages, systemContext, tempStorage } = extractSystemMessages(chatHistory)
+
+      filteredMessages.push({
         role: 'user',
         content: newValue
       })
 
-      // Log chatHistory after appending
-      console.log('Updated chatHistory:', JSON.stringify(chatHistory, null, 2))
-
       let params = {
-        messages: chatHistory,
+        messages: filteredMessages,
         max_tokens: TOKEN_LIMIT,
-        model: 'claude-3-5-sonnet-20241022'
+        model: 'claude-3-5-sonnet-20241022',
+        system: systemContext // Insert concatenated system content here
       }
-      if (timeline) {
-        params = Object.assign(params, { system: timeline })
-      }
-      console.log(params)
+
       const response = await anthropic.messages.create(params)
 
-      chatHistory.push({ role: 'assistant', content: response.content[0].text })
-      // Log final chatHistory before returning
+      filteredMessages.push({ role: 'assistant', content: response.content[0].text })
 
-      if (timeline) {
-        chatHistory.unshift({
-          role: 'system',
-          content: 'timeline\n\n' + timeline
-        })
-      }
-
-      console.log('Final chatHistory before return:', JSON.stringify(response, null, 2))
+      // Step 2: Restore the system messages back to their original positions
+      const updatedChatHistory = restoreSystemMessages(filteredMessages, tempStorage)
 
       return {
         statusCode: 200,
-        body: JSON.stringify(chatHistory)
+        body: JSON.stringify(updatedChatHistory)
       }
     } catch (error) {
       // Log error details

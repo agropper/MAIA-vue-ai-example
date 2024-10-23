@@ -13,11 +13,11 @@ import { sendQuery } from '../composables/useQuery'
 import PopUp from './PopUp.vue'
 
 const AIoptions = [
+  { label: 'Anthropic', value: '/.netlify/functions/anthropic-chat' },
   { label: 'Chat GPT', value: '/.netlify/functions/open-ai-chat' },
   { label: 'Gemini', value: '/.netlify/functions/gemini-chat' },
   { label: 'Mistral', value: '/.netlify/functions/mistral-chat' },
-  { label: 'Together', value: '/.netlify/functions/together-chat' },
-  { label: 'Anthropic', value: '/.netlify/functions/anthropic-chat' }
+  { label: 'Together', value: '/.netlify/functions/together-chat' }
 ]
 
 export default defineComponent({

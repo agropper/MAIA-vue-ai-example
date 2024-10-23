@@ -24,7 +24,7 @@ const handler = async (event) => {
         role: 'user',
         content: newValue
       })
-      console.log(newValue)
+
       const params = {
         messages: chatHistory,
         model: 'mistral-large-latest'
