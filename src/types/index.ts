@@ -9,6 +9,12 @@ type AccessObject = {
   purpose: string
 }
 
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any
+    SpeechRecognition: any
+  }
+}
 export interface AppState {
   chatHistory: ChatHistory
   editBox: number[]
