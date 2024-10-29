@@ -1,7 +1,7 @@
 import type { ChatHistoryItem } from '../types'
 
 const MAX_SIZE = 2 * 1024 * 1024 // 2MB
-const TOKEN_LIMIT = 2048 // Adjust based on the model
+const TOKEN_LIMIT = 40000 // Adjust based on the model
 
 const validateFileSize = (file: File) => {
   if (!file) {
@@ -84,7 +84,7 @@ const truncateTimeline = (timelineString: string): string => {
     if (estimatedTokens <= TOKEN_LIMIT) {
       return currentString
     }
-    lines.shift()
+    lines.pop()
   }
   return ''
 }

@@ -1,4 +1,9 @@
-import { convertJSONtoMarkdown, postData, validateFileSize } from '../utils'
+import {
+  checkTimelineSize,
+  convertJSONtoMarkdown,
+  truncateTimeline,
+  validateFileSize
+} from '../utils'
 
 import type { AppState } from '../types'
 
@@ -37,7 +42,28 @@ const showJWT = async (
       return
     }
 
-    const data = await response.text()
+    let data = await response.text()
+
+    let timelineCheck = checkTimelineSize(data)
+
+    if (timelineCheck.error === true) {
+      writeMessage('Timeline exceeds token limits. Truncating...', 'error')
+      data = truncateTimeline(data)
+      timelineCheck = checkTimelineSize(data)
+
+      if (timelineCheck.error === true) {
+        appState.popupContent = 'Timeline size is too large even after truncation.'
+        appState.popupContentFunction = closeSession
+        showPopup()
+        return
+      } else {
+        appState.popupContent = 'Timeline was truncated to fit token limits.'
+        appState.popupContentFunction = () => {}
+        showPopup()
+      }
+    } else {
+      writeMessage('Timeline is within token limits.', 'success')
+    }
 
     // Make the timeline visible immediately
     appState.chatHistory.push({
