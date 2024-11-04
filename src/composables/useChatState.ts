@@ -10,12 +10,24 @@ const useChatState = () => {
   let writeuri = ''
 
   if (typeof window !== 'undefined') {
-    // Get URI from querystring or local storage in the browser environment
+    // Get URI from querystring
     const urlParams = new URLSearchParams(window.location.search)
-    uri = urlParams.get('uri') || sessionStorage.getItem(localStorageKey) || ''
-    if (uri.length > 0) {
+    const queryStringUri = urlParams.get('uri')
+    
+    // If there's a URI in the querystring, clear storage before setting new values
+    if (queryStringUri) {
+      sessionStorage.clear()
+      localStorage.clear()
+      uri = queryStringUri
       sessionStorage.setItem(localStorageKey, uri)
+    } else {
+      // If no querystring URI, fallback to stored value
+      uri = sessionStorage.getItem(localStorageKey) || ''
+      if (uri.length > 0) {
+        sessionStorage.setItem(localStorageKey, uri)
+      }
     }
+    
     writeuri = uri.replace('Timeline', 'md')
   }
 
@@ -34,9 +46,11 @@ const useChatState = () => {
     }
   ]
 
-  // Check if selectedAI is already set in localStorage
+  // Only check storage for selectedAI if we didn't just clear it
   const selectedAIFromStorage =
-    typeof window !== 'undefined' ? localStorage.getItem(selectedAILocalStorageKey) : null
+    typeof window !== 'undefined' && !new URLSearchParams(window.location.search).get('uri')
+      ? sessionStorage.getItem(selectedAILocalStorageKey)
+      : null
 
   const appState: AppState = reactive({
     chatHistory: [],
@@ -81,7 +95,7 @@ const useChatState = () => {
     () => appState.selectedAI,
     (newSelectedAI) => {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(selectedAILocalStorageKey, newSelectedAI)
+        sessionStorage.setItem(selectedAILocalStorageKey, newSelectedAI)
       }
     }
   )
@@ -93,8 +107,8 @@ const useChatState = () => {
 
   // Function to clear specific local storage keys
   const clearLocalStorageKeys = () => {
-    localStorage.removeItem(localStorageKey)
-    localStorage.removeItem(selectedAILocalStorageKey)
+    sessionStorage.removeItem(localStorageKey)
+    sessionStorage.removeItem(selectedAILocalStorageKey)
     console.log('Local Storage Keys Cleared')
   }
 
