@@ -1,11 +1,37 @@
 import type { AppState } from '../types'
-import { postData } from '../utils'
+import { postData, estimateTokenCount } from '../utils'
+
+const TOKEN_LIMIT = 100000
 
 const sendQuery = (
   appState: AppState,
   writeMessage: (message: string, type: string) => void,
   uri: string
 ) => {
+  // Calculate just chat history and new query tokens
+  const chatHistoryTokens = appState.chatHistory.reduce((total, msg) => {
+    return total + estimateTokenCount(msg.content)
+  }, 0)
+  const newQueryTokens = estimateTokenCount(appState.currentQuery || '')
+  
+  const totalTokens = chatHistoryTokens + newQueryTokens
+
+  console.log('Token breakdown:', {
+    chatHistory: chatHistoryTokens,
+    newQuery: newQueryTokens,
+    total: totalTokens
+  })
+
+  if (totalTokens > TOKEN_LIMIT) {
+    writeMessage(
+      `Query would exceed token limit (${totalTokens.toLocaleString()} tokens total:\n` +
+      `Chat History: ${chatHistoryTokens.toLocaleString()}\n` +
+      `New Query: ${newQueryTokens.toLocaleString()})`,
+      'error'
+    )
+    return
+  }
+
   appState.isLoading = true
 
   // Only push active question if there is a current query
@@ -16,11 +42,10 @@ const sendQuery = (
     }
   }
 
-  // Even if newValue (currentQuery) is empty, send the chatHistory that contains the timeline
+  // Remove the redundant timeline property
   postData(uri, {
     chatHistory: appState.chatHistory,
-    newValue: appState.currentQuery || '',
-    timeline: appState.timeline
+    newValue: appState.currentQuery || ''
   }).then((data) => {
     if (!data || data.message) {
       writeMessage(data ? data.message : 'Failed to get response from AI', 'error')
@@ -32,9 +57,7 @@ const sendQuery = (
       return
     }
 
-    // Update the chat history with the response from the server
     appState.chatHistory = data
-
     appState.isLoading = false
     appState.activeQuestion = {
       role: 'user',

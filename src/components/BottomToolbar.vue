@@ -2,6 +2,41 @@
   <div class="bottom-toolbar">
     <div class="prompt">
       <div class="inner">
+        <q-select
+          v-if="appState.timelineChunks?.length"
+          outlined
+          dense
+          v-model="appState.selectedEpoch"
+          :options="epochOptions"
+          label="Select Timeline Epoch"
+        >
+          <template v-slot:option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section>
+                <q-item-label>Epoch {{ scope.opt.value }}</q-item-label>
+                <q-item-label caption>
+                  {{ getChunkDates(scope.opt.value) }}
+                  ({{ getChunkTokenCount(scope.opt.value) }} tokens)
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+          <template v-slot:selected>
+            <q-item>
+              <q-item-section>
+                <q-item-label>Epoch {{ appState.selectedEpoch.value || appState.selectedEpoch }}</q-item-label>
+                <q-item-label caption>
+                  {{ getChunkDates(appState.selectedEpoch.value || appState.selectedEpoch)  }}
+                  ({{ getChunkTokenCount(appState.selectedEpoch.value || appState.selectedEpoch) }}  tokens)
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+      </div>
+    </div>
+    <div class="prompt">
+      <div class="inner">
         <q-btn @click="pickFiles" flat icon="attach_file" />
         <q-input
           outlined
@@ -33,11 +68,11 @@
         />
       </div>
     </div>
+
     <div :class="'message ' + appState.messageType">
-      <p v-if="appState.isMessage">
-        {{ appState.message }}
-      </p>
+      <p v-if="appState.isMessage">{{ appState.message }}</p>
     </div>
+
     <div :class="'loading-pane ' + appState.isLoading">
       <q-circular-progress indeterminate rounded size="30px" color="primary" class="q-ma-md" />
     </div>
@@ -45,20 +80,34 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
+import { defineComponent, ref, computed } from 'vue'
 import type { PropType } from 'vue'
-import { QBtn, QInput, QCircularProgress } from 'quasar'
+import { QBtn, QInput, QCircularProgress, QSelect, QItem, QItemSection, QItemLabel } from 'quasar'
 import { GNAP } from 'vue3-gnap'
 import type { AppState } from '../types'
+import {
+  createEpochOptions,
+  getChunkDates,
+  getChunkTokenCount,
+  initSpeechRecognition,
+  PAUSE_THRESHOLD,
+  pickFiles
+} from '../utils'
 
 export default defineComponent({
   name: 'BottomToolbar',
+  
   components: {
     QBtn,
     QInput,
     QCircularProgress,
+    QSelect,
+    QItem,
+    QItemSection,
+    QItemLabel,
     GNAP
   },
+
   props: {
     appState: {
       type: Object as PropType<AppState>,
@@ -84,8 +133,13 @@ export default defineComponent({
       type: String,
       default: 'Message Anthropic',
       required: false
+    },
+    clearLocalStorageKeys: {
+      type: Function as PropType<() => void>,
+      required: true
     }
   },
+
   setup(props) {
     const isListening = ref(false)
     const recognition = ref<SpeechRecognition | null>(null)
@@ -94,7 +148,9 @@ export default defineComponent({
     const finalTranscript = ref('')
     const interimTranscript = ref('')
 
-    const PAUSE_THRESHOLD = 1500 // 1.5 seconds of silence before submitting
+    const epochOptions = computed(() => 
+      createEpochOptions(props.appState.timelineChunks)
+    )
 
     const handleSubmitAfterPause = () => {
       if (finalTranscript.value.trim()) {
@@ -108,7 +164,6 @@ export default defineComponent({
       }
     }
 
-    // Reset the pause timer
     const resetPauseTimer = () => {
       if (pauseTimer.value) {
         clearTimeout(pauseTimer.value)
@@ -116,47 +171,30 @@ export default defineComponent({
       pauseTimer.value = window.setTimeout(handleSubmitAfterPause, PAUSE_THRESHOLD)
     }
 
-    // Check if speech recognition is supported
-    const initSpeechRecognition = () => {
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition
-        recognition.value = new SpeechRecognition()
-        recognition.value.continuous = true
-        recognition.value.interimResults = true
-        isSpeechSupported.value = true
-
-        recognition.value.onresult = (event) => {
-          interimTranscript.value = ''
-
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript.value += event.results[i][0].transcript
-              // Update the input field immediately with final results
-              props.appState.currentQuery = finalTranscript.value
-              resetPauseTimer()
-            } else {
-              interimTranscript.value += event.results[i][0].transcript
-              // Show interim results in the input field
-              props.appState.currentQuery = finalTranscript.value + interimTranscript.value
-            }
-          }
-        }
-
-        recognition.value.onend = () => {
-          isListening.value = false
-          // Submit any remaining final transcript
-          handleSubmitAfterPause()
-        }
-
-        recognition.value.onerror = (event) => {
-          console.error('Speech recognition error:', event.error)
-          isListening.value = false
-          if (pauseTimer.value) {
-            clearTimeout(pauseTimer.value)
-          }
+    recognition.value = initSpeechRecognition(
+      (transcript) => {
+        finalTranscript.value += transcript
+        props.appState.currentQuery = finalTranscript.value
+        resetPauseTimer()
+      },
+      (transcript) => {
+        interimTranscript.value = transcript
+        props.appState.currentQuery = finalTranscript.value + interimTranscript.value
+      },
+      () => {
+        isListening.value = false
+        handleSubmitAfterPause()
+      },
+      (error) => {
+        console.error('Speech recognition error:', error)
+        isListening.value = false
+        if (pauseTimer.value) {
+          clearTimeout(pauseTimer.value)
         }
       }
-    }
+    )
+
+    isSpeechSupported.value = recognition.value !== null
 
     const toggleSpeechRecognition = () => {
       if (!recognition.value) return
@@ -175,22 +213,14 @@ export default defineComponent({
       }
     }
 
-    // Initialize speech recognition on component mount
-    initSpeechRecognition()
-
     return {
       isListening,
       isSpeechSupported,
-      toggleSpeechRecognition
+      toggleSpeechRecognition,
+      epochOptions,
+      getChunkDates: (epoch: number) => getChunkDates(epoch, props.appState.timelineChunks),
+      getChunkTokenCount: (epoch: number) => getChunkTokenCount(epoch, props.appState.timelineChunks)
     }
   }
 })
 </script>
-
-<style scoped>
-.inner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-</style>

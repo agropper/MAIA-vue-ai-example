@@ -1,6 +1,5 @@
 import { onMounted, onUnmounted, reactive, watch } from 'vue'
-
-import type { AppState } from '../types'
+import type { AppState, TimelineChunk } from '../types'
 
 const useChatState = () => {
   const localStorageKey = 'noshuri'
@@ -77,7 +76,10 @@ const useChatState = () => {
     currentQuery: '',
     currentFile: null,
     selectedAI: selectedAIFromStorage || '/.netlify/functions/anthropic-chat',
-    timeline: ''
+    timeline: '',
+    timelineChunks: [],
+    selectedEpoch: 1,
+    hasChunkedTimeline: false
   })
 
   const writeMessage = (message: string, messageType: string) => {
@@ -96,6 +98,36 @@ const useChatState = () => {
     (newSelectedAI) => {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(selectedAILocalStorageKey, newSelectedAI)
+      }
+    }
+  )
+
+  // Keeping the epoch watcher for now
+  watch(
+    () => appState.selectedEpoch,
+    (newEpoch) => {
+      console.log('Selected Epoch:', newEpoch)
+      if (appState.hasChunkedTimeline) {
+        const selectedChunk = appState.timelineChunks[newEpoch.value]
+        if (selectedChunk) {
+          // Update timeline content
+          appState.timeline = selectedChunk.content
+
+          // Find and update the system message in chat history
+          const systemMessageIndex = appState.chatHistory.findIndex(msg => msg.role === 'system')
+          const newSystemMessage = {
+            role: 'system',
+            content: `Timeline context (${selectedChunk.dateRange.start} to ${selectedChunk.dateRange.end}):\n\n${selectedChunk.content}`
+          }
+
+          if (systemMessageIndex !== -1) {
+            // Replace existing system message
+            appState.chatHistory[systemMessageIndex] = newSystemMessage
+          } else if (appState.chatHistory.length === 0) {
+            // Add new system message if chat is empty
+            appState.chatHistory.push(newSystemMessage)
+          }
+        }
       }
     }
   )
