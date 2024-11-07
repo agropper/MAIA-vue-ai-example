@@ -1,15 +1,14 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
 import { QFile, QIcon, QBtnToggle } from 'quasar'
-
-import { getSystemMessageType, pickFiles, convertJSONtoMarkdown } from '../utils'
+import { getSystemMessageType, pickFiles } from '../utils'
 import { useChatState } from '../composables/useChatState'
+import { useChatLogger } from '../composables/useChatLogger'
+import { useTranscript } from '../composables/useTranscript'
 import ChatArea from './ChatArea.vue'
 import BottomToolbar from './BottomToolbar.vue'
-
 import { showAuth, showJWT, saveToNosh, uploadFile } from '../composables/useAuthHandling'
 import { sendQuery } from '../composables/useQuery'
-
 import PopUp from './PopUp.vue'
 
 const AIoptions = [
@@ -41,40 +40,49 @@ export default defineComponent({
     }
   },
   setup() {
-    const { appState, writeMessage, clearLocalStorageKeys } = useChatState() // Import clearLocalStorageKeys from useChatState
+    const { appState, writeMessage, clearLocalStorageKeys } = useChatState()
+    const { logMessage, logContextSwitch, logSystemEvent, setTimelineChunks } = useChatLogger()
+    const { generateTranscript } = useTranscript()
     const localStorageKey = 'noshuri'
     const popupRef = ref<InstanceType<typeof PopUp> | null>(null)
 
-    // Helper functions
     const showPopup = () => {
       if (popupRef.value && popupRef.value.openPopup) {
         popupRef.value.openPopup()
       }
     }
 
-    // Edit Chat Message
     const editMessage = (idx: number) => {
       appState.editBox.push(idx)
+      logSystemEvent('Message edit initiated', { messageIndex: idx }, appState)
     }
 
     const triggerAuth = () => {
       showAuth(appState, writeMessage)
+      logSystemEvent('Authentication triggered', {}, appState)
     }
 
     const triggerJWT = (jwt: string) => {
       showJWT(jwt, writeMessage, appState, closeSession, showPopup)
+      logSystemEvent('JWT provided', { jwt }, appState)
     }
 
     const triggerSaveToNosh = async () => {
       await saveToNosh(appState, writeMessage, showPopup, closeSession)
+      logSystemEvent('Saved to NOSH', {}, appState)
     }
 
     const triggerSendQuery = async () => {
       await sendQuery(appState, writeMessage, appState.selectedAI)
+      logMessage({
+        role: 'user',
+        content: `Sent query to ${appState.selectedAI}`
+      })
     }
 
     const triggerUploadFile = async (file: File) => {
       await uploadFile(file, appState, writeMessage)
+      logSystemEvent('File uploaded', { fileName: file.name }, appState)
     }
 
     const handleFileUpload = (event: Event) => {
@@ -90,27 +98,29 @@ export default defineComponent({
       if (index > -1) {
         appState.editBox.splice(index, 1)
       }
+      logMessage({
+        role: 'user',
+        content: `Saved message at index ${idx}`
+      })
     }
 
     const saveToFile = () => {
-      const blob = new Blob(
-        [convertJSONtoMarkdown(appState.chatHistory, appState.userName, true)],
-        {
-          type: 'text/markdown'
-        }
-      )
+      const transcriptContent = generateTranscript(appState, true)
+      const blob = new Blob([transcriptContent], { type: 'text/markdown' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = 'transcript.md'
       a.click()
       URL.revokeObjectURL(url)
+      logSystemEvent('Transcript saved to file', {}, appState)
     }
 
     const closeNoSave = () => {
       appState.chatHistory = []
       appState.isModal = false
       closeSession()
+      logSystemEvent('Session closed without saving', {}, appState)
     }
 
     const closeSession = () => {
@@ -118,7 +128,11 @@ export default defineComponent({
       localStorage.removeItem('gnap')
       sessionStorage.removeItem(localStorageKey)
       window.close()
+      logSystemEvent('Session closed', {}, appState)
     }
+
+    // Call this to initialize timeline chunks, assuming you have them in `appState.timelineChunks`
+    setTimelineChunks(appState.timelineChunks, appState)
 
     return {
       appState,
@@ -140,7 +154,6 @@ export default defineComponent({
       clearLocalStorageKeys,
       getSystemMessageType,
       pickFiles,
-      convertJSONtoMarkdown,
       AIoptions
     }
   }

@@ -1,7 +1,7 @@
-import type { AppState } from '../types'
-import { postData, estimateTokenCount } from '../utils'
+import { estimateTokenCount, postData } from '../utils'
 
-const TOKEN_LIMIT = 100000
+import type { AppState } from '../types'
+import { TOKEN_LIMIT } from '../types'
 
 const sendQuery = (
   appState: AppState,
@@ -13,7 +13,7 @@ const sendQuery = (
     return total + estimateTokenCount(msg.content)
   }, 0)
   const newQueryTokens = estimateTokenCount(appState.currentQuery || '')
-  
+
   const totalTokens = chatHistoryTokens + newQueryTokens
 
   console.log('Token breakdown:', {
@@ -25,8 +25,8 @@ const sendQuery = (
   if (totalTokens > TOKEN_LIMIT) {
     writeMessage(
       `Query would exceed token limit (${totalTokens.toLocaleString()} tokens total:\n` +
-      `Chat History: ${chatHistoryTokens.toLocaleString()}\n` +
-      `New Query: ${newQueryTokens.toLocaleString()})`,
+        `Chat History: ${chatHistoryTokens.toLocaleString()}\n` +
+        `New Query: ${newQueryTokens.toLocaleString()})`,
       'error'
     )
     return

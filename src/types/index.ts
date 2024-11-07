@@ -64,3 +64,20 @@ export interface AppState {
   selectedEpoch: number
   hasChunkedTimeline: boolean
 }
+export interface LogEntry {
+  timestamp: number
+  type: 'message' | 'context_switch' | 'system_event'
+  content: ChatHistoryItem | string | TimelineChunk
+  metadata: {
+    activeChunkIndex?: number
+    dateRange?: {
+      start: string
+      end: string
+    }
+    event?: string
+  }
+}
+export interface TranscriptSection {
+  type: 'conversation' | 'context' | 'timeline' | 'audit' | 'session' | 'signature'
+  content: string
+}
