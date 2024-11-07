@@ -24,10 +24,15 @@
           <template v-slot:selected>
             <q-item>
               <q-item-section>
-                <q-item-label>Epoch {{ appState.selectedEpoch.value || appState.selectedEpoch }}</q-item-label>
+                <q-item-label
+                  >Epoch {{ appState.selectedEpoch.value || appState.selectedEpoch }}</q-item-label
+                >
                 <q-item-label caption>
-                  {{ getChunkDates(appState.selectedEpoch.value || appState.selectedEpoch)  }}
-                  ({{ getChunkTokenCount(appState.selectedEpoch.value || appState.selectedEpoch) }}  tokens)
+                  {{ getChunkDates(appState.selectedEpoch.value || appState.selectedEpoch) }}
+                  ({{
+                    getChunkTokenCount(appState.selectedEpoch.value || appState.selectedEpoch)
+                  }}
+                  tokens)
                 </q-item-label>
               </q-item-section>
             </q-item>
@@ -58,7 +63,7 @@
         <q-btn color="primary" label="Send" @click="triggerSendQuery" size="sm" />
         <GNAP
           v-if="!appState.isAuthorized"
-          name="gnap-btn"
+          name="MAIA"
           helper="blue small"
           @on-authorized="triggerAuth"
           @jwt="triggerJWT"
@@ -96,7 +101,7 @@ import {
 
 export default defineComponent({
   name: 'BottomToolbar',
-  
+
   components: {
     QBtn,
     QInput,
@@ -148,9 +153,7 @@ export default defineComponent({
     const finalTranscript = ref('')
     const interimTranscript = ref('')
 
-    const epochOptions = computed(() => 
-      createEpochOptions(props.appState.timelineChunks)
-    )
+    const epochOptions = computed(() => createEpochOptions(props.appState.timelineChunks))
 
     const handleSubmitAfterPause = () => {
       if (finalTranscript.value.trim()) {
@@ -219,7 +222,8 @@ export default defineComponent({
       toggleSpeechRecognition,
       epochOptions,
       getChunkDates: (epoch: number) => getChunkDates(epoch, props.appState.timelineChunks),
-      getChunkTokenCount: (epoch: number) => getChunkTokenCount(epoch, props.appState.timelineChunks)
+      getChunkTokenCount: (epoch: number) =>
+        getChunkTokenCount(epoch, props.appState.timelineChunks)
     }
   }
 })

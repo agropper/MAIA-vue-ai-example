@@ -1,5 +1,5 @@
-import { onMounted, onUnmounted, reactive, watch } from 'vue'
 import type { AppState, TimelineChunk } from '../types'
+import { onMounted, onUnmounted, reactive, watch } from 'vue'
 
 const useChatState = () => {
   const localStorageKey = 'noshuri'
@@ -12,7 +12,7 @@ const useChatState = () => {
     // Get URI from querystring
     const urlParams = new URLSearchParams(window.location.search)
     const queryStringUri = urlParams.get('uri')
-    
+
     // If there's a URI in the querystring, clear storage before setting new values
     if (queryStringUri) {
       sessionStorage.clear()
@@ -26,19 +26,19 @@ const useChatState = () => {
         sessionStorage.setItem(localStorageKey, uri)
       }
     }
-    
+
     writeuri = uri.replace('Timeline', 'md')
   }
 
   const access = [
     {
-      type: 'App',
+      type: 'Timeline',
       actions: ['read'],
       locations: [uri],
       purpose: 'MAIA - Testing'
     },
     {
-      type: 'App',
+      type: 'Markdown',
       actions: ['write'],
       locations: [writeuri],
       purpose: 'MAIA - Testing'
@@ -114,7 +114,7 @@ const useChatState = () => {
           appState.timeline = selectedChunk.content
 
           // Find and update the system message in chat history
-          const systemMessageIndex = appState.chatHistory.findIndex(msg => msg.role === 'system')
+          const systemMessageIndex = appState.chatHistory.findIndex((msg) => msg.role === 'system')
           const newSystemMessage = {
             role: 'system',
             content: `Timeline context (${selectedChunk.dateRange.start} to ${selectedChunk.dateRange.end}):\n\n${selectedChunk.content}`
