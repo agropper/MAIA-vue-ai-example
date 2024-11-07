@@ -1,6 +1,5 @@
 import { onMounted, onUnmounted, reactive, watch } from 'vue'
-
-import type { AppState } from '../types'
+import type { AppState, TimelineChunk } from '../types'
 
 const useChatState = () => {
   const localStorageKey = 'noshuri'
@@ -10,12 +9,24 @@ const useChatState = () => {
   let writeuri = ''
 
   if (typeof window !== 'undefined') {
-    // Get URI from querystring or local storage in the browser environment
+    // Get URI from querystring
     const urlParams = new URLSearchParams(window.location.search)
-    uri = urlParams.get('uri') || sessionStorage.getItem(localStorageKey) || ''
-    if (uri.length > 0) {
+    const queryStringUri = urlParams.get('uri')
+    
+    // If there's a URI in the querystring, clear storage before setting new values
+    if (queryStringUri) {
+      sessionStorage.clear()
+      localStorage.clear()
+      uri = queryStringUri
       sessionStorage.setItem(localStorageKey, uri)
+    } else {
+      // If no querystring URI, fallback to stored value
+      uri = sessionStorage.getItem(localStorageKey) || ''
+      if (uri.length > 0) {
+        sessionStorage.setItem(localStorageKey, uri)
+      }
     }
+    
     writeuri = uri.replace('Timeline', 'md')
   }
 
@@ -34,9 +45,11 @@ const useChatState = () => {
     }
   ]
 
-  // Check if selectedAI is already set in localStorage
+  // Only check storage for selectedAI if we didn't just clear it
   const selectedAIFromStorage =
-    typeof window !== 'undefined' ? localStorage.getItem(selectedAILocalStorageKey) : null
+    typeof window !== 'undefined' && !new URLSearchParams(window.location.search).get('uri')
+      ? sessionStorage.getItem(selectedAILocalStorageKey)
+      : null
 
   const appState: AppState = reactive({
     chatHistory: [],
@@ -63,7 +76,10 @@ const useChatState = () => {
     currentQuery: '',
     currentFile: null,
     selectedAI: selectedAIFromStorage || '/.netlify/functions/anthropic-chat',
-    timeline: ''
+    timeline: '',
+    timelineChunks: [],
+    selectedEpoch: 1,
+    hasChunkedTimeline: false
   })
 
   const writeMessage = (message: string, messageType: string) => {
@@ -81,7 +97,37 @@ const useChatState = () => {
     () => appState.selectedAI,
     (newSelectedAI) => {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(selectedAILocalStorageKey, newSelectedAI)
+        sessionStorage.setItem(selectedAILocalStorageKey, newSelectedAI)
+      }
+    }
+  )
+
+  // Keeping the epoch watcher for now
+  watch(
+    () => appState.selectedEpoch,
+    (newEpoch) => {
+      console.log('Selected Epoch:', newEpoch)
+      if (appState.hasChunkedTimeline) {
+        const selectedChunk = appState.timelineChunks[newEpoch.value]
+        if (selectedChunk) {
+          // Update timeline content
+          appState.timeline = selectedChunk.content
+
+          // Find and update the system message in chat history
+          const systemMessageIndex = appState.chatHistory.findIndex(msg => msg.role === 'system')
+          const newSystemMessage = {
+            role: 'system',
+            content: `Timeline context (${selectedChunk.dateRange.start} to ${selectedChunk.dateRange.end}):\n\n${selectedChunk.content}`
+          }
+
+          if (systemMessageIndex !== -1) {
+            // Replace existing system message
+            appState.chatHistory[systemMessageIndex] = newSystemMessage
+          } else if (appState.chatHistory.length === 0) {
+            // Add new system message if chat is empty
+            appState.chatHistory.push(newSystemMessage)
+          }
+        }
       }
     }
   )
@@ -93,8 +139,8 @@ const useChatState = () => {
 
   // Function to clear specific local storage keys
   const clearLocalStorageKeys = () => {
-    localStorage.removeItem(localStorageKey)
-    localStorage.removeItem(selectedAILocalStorageKey)
+    sessionStorage.removeItem(localStorageKey)
+    sessionStorage.removeItem(selectedAILocalStorageKey)
     console.log('Local Storage Keys Cleared')
   }
 

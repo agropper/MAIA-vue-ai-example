@@ -1,8 +1,7 @@
 import {
-  checkTimelineSize,
   convertJSONtoMarkdown,
-  truncateTimeline,
-  validateFileSize
+  processTimeline,
+  validateFile
 } from '../utils'
 
 import type { AppState } from '../types'
@@ -35,51 +34,98 @@ const showJWT = async (
     })
 
     if (!response.ok) {
-      appState.popupContent =
-        'Fatal Error. Failed to load patient timeline. Close this window and restart session.'
-      appState.popupContentFunction = closeSession
-      showPopup()
-      return
+      throw new Error('Failed to fetch')
     }
 
     let data = await response.text()
+    const { timeline, hasError } = processTimeline(data, writeMessage);
 
-    let timelineCheck = checkTimelineSize(data)
-
-    if (timelineCheck.error === true) {
-      writeMessage('Timeline exceeds token limits. Truncating...', 'error')
-      data = truncateTimeline(data)
-      timelineCheck = checkTimelineSize(data)
-
-      if (timelineCheck.error === true) {
-        appState.popupContent = 'Timeline size is too large even after truncation.'
-        appState.popupContentFunction = closeSession
-        showPopup()
-        return
-      } else {
-        appState.popupContent = 'Timeline was truncated to fit token limits.'
-        appState.popupContentFunction = () => {}
-        showPopup()
-      }
-    } else {
-      writeMessage('Timeline is within token limits.', 'success')
+    if (hasError) {
+      appState.popupContent = 'Timeline size is too large. You may want to edit it manually.';
+      appState.popupContentFunction = closeSession;
+      showPopup();
+      return;
     }
 
-    // Make the timeline visible immediately
-    appState.chatHistory.push({
-      role: 'system',
-      content: 'timeline\n\n' + data // Add timeline to chatHistory for immediate visibility
-    })
-    appState.timeline = data
+    // Handle timeline data directly in appState
+    if (Array.isArray(timeline)) {
+      appState.timelineChunks = timeline;
+      appState.hasChunkedTimeline = true;
+      appState.timeline = timeline[0].content; // Set initial timeline content
+      
+      // Add initial system message with first chunk
+      appState.chatHistory = [{
+        role: 'system',
+        content: `Timeline context (${timeline[0].dateRange.start} to ${timeline[0].dateRange.end}):\n\n${timeline[0].content}`
+      }];
+    } else {
+      appState.timeline = timeline;
+      appState.hasChunkedTimeline = false;
+      appState.timelineChunks = [];
+      
+      // Add timeline as single system message
+      appState.chatHistory = [{
+        role: 'system',
+        content: `Timeline context:\n\n${timeline}`
+      }];
+    }
 
-    writeMessage('Patient Timeline Loaded and Visible', 'success')
-    appState.isLoading = false
+    appState.isLoading = false;
+    writeMessage('Patient Timeline Loaded', 'success');
   } catch (error: any) {
     writeMessage(`Error: ${error.message}`, 'error')
   } finally {
     appState.isLoading = false
   }
 }
+
+const uploadFile = async (
+  file: File,
+  appState: AppState,
+  writeMessage: (message: string, type: string) => void
+) => {
+  const validation = await validateFile(file, writeMessage);
+  
+  if (!validation.isValid || !validation.processedContent) {
+    writeMessage(validation.error || 'Invalid file', 'error');
+    return;
+  }
+
+  appState.isLoading = true;
+  try {
+    if (Array.isArray(validation.processedContent)) {
+      // Simply set the chunks and current content in memory
+      appState.timelineChunks = validation.processedContent;
+      appState.hasChunkedTimeline = true;
+      
+      const firstChunk = validation.processedContent[0];
+      appState.timeline = firstChunk.content;
+      
+      // Set the single system message with the current chunk
+      appState.chatHistory = [{
+        role: 'system',
+        content: `Timeline context (${firstChunk.dateRange.start} to ${firstChunk.dateRange.end}):\n\n${firstChunk.content}`
+      }];
+    } else {
+      appState.timeline = validation.processedContent;
+      appState.hasChunkedTimeline = false;
+      appState.timelineChunks = [];
+      
+      appState.chatHistory = [{
+        role: 'system',
+        content: `Timeline context:\n\n${validation.processedContent}`
+      }];
+    }
+    
+    writeMessage('Timeline processed successfully', 'success');
+  } catch (error: any) {
+    writeMessage(`Error: ${error.message}`, 'error');
+  } finally {
+    appState.isLoading = false;
+  }
+}
+
+
 
 const saveToNosh = async (
   appState: AppState,
@@ -109,41 +155,6 @@ const saveToNosh = async (
     showPopup()
   } catch (error) {
     writeMessage('Failed to save to Nosh', 'error')
-  }
-}
-
-const uploadFile = async (
-  file: File,
-  appState: AppState,
-  writeMessage: (message: string, type: string) => void
-) => {
-  if (!validateFileSize(file)) {
-    writeMessage('File is too large to upload.', 'error')
-    return
-  }
-  appState.isLoading = true
-  try {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('chatHistory', JSON.stringify(appState.chatHistory))
-    const response = await fetch(appState.selectedAI, {
-      method: 'POST',
-      body: formData
-    })
-
-    if (!response.ok) {
-      writeMessage('Failed to upload file', 'error')
-      return
-    }
-    const data = await response.json()
-    if (data.chatHistory) {
-      writeMessage('File uploaded', 'success')
-      appState.chatHistory = data.chatHistory
-    }
-  } catch (error: any) {
-    writeMessage(`Error: ${error.message}`, 'error')
-  } finally {
-    appState.isLoading = false
   }
 }
 

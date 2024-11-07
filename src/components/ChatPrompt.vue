@@ -93,7 +93,7 @@ export default defineComponent({
     }
 
     const saveToFile = () => {
-      const blob = new Blob([convertJSONtoMarkdown(appState.chatHistory, appState.userName)], {
+      const blob = new Blob([convertJSONtoMarkdown(appState.chatHistory, appState.userName,)], {
         type: 'text/markdown'
       })
       const url = URL.createObjectURL(blob)
