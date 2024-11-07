@@ -22,16 +22,6 @@ const sendQuery = (
     total: totalTokens
   })
 
-  if (totalTokens > TOKEN_LIMIT) {
-    writeMessage(
-      `Query would exceed token limit (${totalTokens.toLocaleString()} tokens total:\n` +
-        `Chat History: ${chatHistoryTokens.toLocaleString()}\n` +
-        `New Query: ${newQueryTokens.toLocaleString()})`,
-      'error'
-    )
-    return
-  }
-
   appState.isLoading = true
 
   // Only push active question if there is a current query
