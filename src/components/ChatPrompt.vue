@@ -93,9 +93,12 @@ export default defineComponent({
     }
 
     const saveToFile = () => {
-      const blob = new Blob([convertJSONtoMarkdown(appState.chatHistory, appState.userName,)], {
-        type: 'text/markdown'
-      })
+      const blob = new Blob(
+        [convertJSONtoMarkdown(appState.chatHistory, appState.userName, true)],
+        {
+          type: 'text/markdown'
+        }
+      )
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
