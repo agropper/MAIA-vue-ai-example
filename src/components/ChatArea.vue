@@ -78,7 +78,7 @@
 import { defineComponent } from 'vue'
 import { QBtn, QChatMessage, QCard, QCardSection, QCardActions } from 'quasar'
 import VueMarkdown from 'vue-markdown-render'
-import { getSystemMessageType } from '@/utils'
+import { getSystemMessageType } from '../utils'
 
 export default defineComponent({
   name: 'ChatArea',
