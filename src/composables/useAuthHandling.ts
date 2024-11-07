@@ -1,10 +1,7 @@
-import {
-  convertJSONtoMarkdown,
-  processTimeline,
-  validateFile
-} from '../utils'
+import { convertJSONtoMarkdown, processTimeline, validateFile } from '../utils'
 
 import type { AppState } from '../types'
+import { useTranscript } from '../composables/useTranscript'
 
 const showAuth = (appState: AppState, writeMessage: (message: string, type: string) => void) => {
   appState.isAuthorized = true
@@ -38,40 +35,44 @@ const showJWT = async (
     }
 
     let data = await response.text()
-    const { timeline, hasError } = processTimeline(data, writeMessage);
+    const { timeline, hasError } = processTimeline(data, writeMessage)
 
     if (hasError) {
-      appState.popupContent = 'Timeline size is too large. You may want to edit it manually.';
-      appState.popupContentFunction = closeSession;
-      showPopup();
-      return;
+      appState.popupContent = 'Timeline size is too large. You may want to edit it manually.'
+      appState.popupContentFunction = closeSession
+      showPopup()
+      return
     }
 
     // Handle timeline data directly in appState
     if (Array.isArray(timeline)) {
-      appState.timelineChunks = timeline;
-      appState.hasChunkedTimeline = true;
-      appState.timeline = timeline[0].content; // Set initial timeline content
-      
+      appState.timelineChunks = timeline
+      appState.hasChunkedTimeline = true
+      appState.timeline = timeline[0].content // Set initial timeline content
+
       // Add initial system message with first chunk
-      appState.chatHistory = [{
-        role: 'system',
-        content: `Timeline context (${timeline[0].dateRange.start} to ${timeline[0].dateRange.end}):\n\n${timeline[0].content}`
-      }];
+      appState.chatHistory = [
+        {
+          role: 'system',
+          content: `Timeline context (${timeline[0].dateRange.start} to ${timeline[0].dateRange.end}):\n\n${timeline[0].content}`
+        }
+      ]
     } else {
-      appState.timeline = timeline;
-      appState.hasChunkedTimeline = false;
-      appState.timelineChunks = [];
-      
+      appState.timeline = timeline
+      appState.hasChunkedTimeline = false
+      appState.timelineChunks = []
+
       // Add timeline as single system message
-      appState.chatHistory = [{
-        role: 'system',
-        content: `Timeline context:\n\n${timeline}`
-      }];
+      appState.chatHistory = [
+        {
+          role: 'system',
+          content: `Timeline context:\n\n${timeline}`
+        }
+      ]
     }
 
-    appState.isLoading = false;
-    writeMessage('Patient Timeline Loaded', 'success');
+    appState.isLoading = false
+    writeMessage('Patient Timeline Loaded', 'success')
   } catch (error: any) {
     writeMessage(`Error: ${error.message}`, 'error')
   } finally {
@@ -84,48 +85,50 @@ const uploadFile = async (
   appState: AppState,
   writeMessage: (message: string, type: string) => void
 ) => {
-  const validation = await validateFile(file, writeMessage);
-  
+  const validation = await validateFile(file, writeMessage)
+
   if (!validation.isValid || !validation.processedContent) {
-    writeMessage(validation.error || 'Invalid file', 'error');
-    return;
+    writeMessage(validation.error || 'Invalid file', 'error')
+    return
   }
 
-  appState.isLoading = true;
+  appState.isLoading = true
   try {
     if (Array.isArray(validation.processedContent)) {
       // Simply set the chunks and current content in memory
-      appState.timelineChunks = validation.processedContent;
-      appState.hasChunkedTimeline = true;
-      
-      const firstChunk = validation.processedContent[0];
-      appState.timeline = firstChunk.content;
-      
+      appState.timelineChunks = validation.processedContent
+      appState.hasChunkedTimeline = true
+
+      const firstChunk = validation.processedContent[0]
+      appState.timeline = firstChunk.content
+
       // Set the single system message with the current chunk
-      appState.chatHistory = [{
-        role: 'system',
-        content: `Timeline context (${firstChunk.dateRange.start} to ${firstChunk.dateRange.end}):\n\n${firstChunk.content}`
-      }];
+      appState.chatHistory = [
+        {
+          role: 'system',
+          content: `Timeline context (${firstChunk.dateRange.start} to ${firstChunk.dateRange.end}):\n\n${firstChunk.content}`
+        }
+      ]
     } else {
-      appState.timeline = validation.processedContent;
-      appState.hasChunkedTimeline = false;
-      appState.timelineChunks = [];
-      
-      appState.chatHistory = [{
-        role: 'system',
-        content: `Timeline context:\n\n${validation.processedContent}`
-      }];
+      appState.timeline = validation.processedContent
+      appState.hasChunkedTimeline = false
+      appState.timelineChunks = []
+
+      appState.chatHistory = [
+        {
+          role: 'system',
+          content: `Timeline context:\n\n${validation.processedContent}`
+        }
+      ]
     }
-    
-    writeMessage('Timeline processed successfully', 'success');
+
+    writeMessage('Timeline processed successfully', 'success')
   } catch (error: any) {
-    writeMessage(`Error: ${error.message}`, 'error');
+    writeMessage(`Error: ${error.message}`, 'error')
   } finally {
-    appState.isLoading = false;
+    appState.isLoading = false
   }
 }
-
-
 
 const saveToNosh = async (
   appState: AppState,
@@ -133,9 +136,13 @@ const saveToNosh = async (
   showPopup: () => void,
   closeSession: () => void
 ) => {
+  const { generateTranscript } = useTranscript()
   appState.isLoading = true
   writeMessage('Saving to Nosh...', 'success')
+
   try {
+    const transcriptContent = generateTranscript(appState) // Generate transcript with system events
+
     const response = await fetch(appState.writeuri, {
       method: 'PUT',
       headers: {
@@ -143,7 +150,7 @@ const saveToNosh = async (
         Authorization: `Bearer ${appState.jwt}`
       },
       body: JSON.stringify({
-        content: convertJSONtoMarkdown(appState.chatHistory, appState.userName)
+        content: transcriptContent
       })
     })
 
@@ -155,6 +162,7 @@ const saveToNosh = async (
     showPopup()
   } catch (error) {
     writeMessage('Failed to save to Nosh', 'error')
+    appState.isLoading = false
   }
 }
 
