@@ -21,12 +21,6 @@ export function useTranscript() {
   const { systemEvents, generateAuditTrail, logSystemEvent } = useChatLogger()
 
   const generateSessionInfo = (appState: AppState): string => {
-    const uniqueEpochs = new Set(
-      systemEvents.value
-        .filter((entry) => entry.type === 'context_switch')
-        .map((entry) => entry.metadata.activeChunkIndex)
-    )
-
     return `### Session Information\n
 - Date: ${formatDate(new Date())}
 - User: ${appState.userName}
@@ -71,8 +65,12 @@ export function useTranscript() {
     )
   }
 
-  const generateTimeline = (timeline: string): string => {
-    return `### Complete Timeline\n\n${timeline}`
+  const generateTimeline = (timeline: string, timelineChunks: TimelineChunk[]): string => {
+    if (timelineChunks.length === 0) {
+      return `### Complete Timeline\n\n${timeline}`
+    } else {
+      return `### Complete Timeline\n\n${timelineChunks.map((chunk) => chunk.content).join('\n\n')}`
+    }
   }
 
   const generateAuditSection = (): string => {
@@ -124,7 +122,7 @@ export function useTranscript() {
     if (includeSystem) {
       sections.push({
         type: 'timeline',
-        content: generateTimeline(appState.timeline)
+        content: generateTimeline(appState.timeline, appState.timelineChunks)
       })
     }
 
@@ -132,6 +130,7 @@ export function useTranscript() {
   }
 
   return {
-    generateTranscript
+    generateTranscript,
+    generateTimeline
   }
 }

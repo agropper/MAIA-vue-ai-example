@@ -215,6 +215,7 @@ export default defineComponent({
   <!-- Popup for displaying system messages -->
   <PopUp
     ref="popupRef"
+    :appState="appState"
     :content="appState.popupContent"
     button-text="Close"
     :on-close="() => appState.popupContentFunction()"

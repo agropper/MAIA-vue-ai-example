@@ -1,10 +1,12 @@
 <template>
   <q-dialog v-model="isVisible">
     <q-card>
-      <q-card-actions align="right">
-        <q-btn :label="buttonText" color="primary" @click="closePopup" />
+      <q-card-actions>
         <q-btn label="Copy" color="secondary" @click="copyToClipboard" />
         <q-btn label="Save Locally" color="secondary" @click="saveMarkdown" />
+        <span style="flex: 1; text-align: right">
+          <q-btn label="Close" color="primary" @click="closePopup" />;
+        </span>
       </q-card-actions>
       <q-card-section>
         <VueMarkdown :source="content" class="popup-text" />
@@ -16,6 +18,10 @@
 <script lang="ts">
 import { QDialog, QCard, QCardSection, QCardActions, QBtn } from 'quasar'
 import VueMarkdown from 'vue-markdown-render'
+import { useTranscript } from '../composables/useTranscript'
+import type { PropType } from 'vue'
+import type { AppState } from '../types'
+const { generateTimeline } = useTranscript()
 
 export default {
   name: 'PopupComponent',
@@ -28,6 +34,10 @@ export default {
     VueMarkdown
   },
   props: {
+    appState: {
+      type: Object as PropType<AppState>,
+      required: true
+    },
     content: {
       type: String,
       default: ''
@@ -55,10 +65,11 @@ export default {
       this.onClose()
     },
     saveMarkdown() {
-      const blob = new Blob([this.content], {
-        type: 'text/markdown'
-      })
-      const url = URL.createObjectURL(blob)
+      const url = URL.createObjectURL(
+        new Blob([generateTimeline(this.appState.timeline, this.appState.timelineChunks)], {
+          type: 'text/markdown'
+        })
+      )
       const a = document.createElement('a')
       const currentDate = new Date().toISOString().slice(0, 10).replace(/-/g, '')
       a.href = url
@@ -73,7 +84,7 @@ export default {
     },
     copyToClipboard() {
       navigator.clipboard
-        .writeText(this.content)
+        .writeText(generateTimeline(this.appState.timeline, this.appState.timelineChunks))
         .then(() => {
           this.$q.notify({
             message: 'Content copied to clipboard',

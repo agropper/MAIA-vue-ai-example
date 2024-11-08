@@ -1,7 +1,6 @@
 import { estimateTokenCount, postData } from '../utils'
 
 import type { AppState } from '../types'
-import { TOKEN_LIMIT } from '../types'
 
 const sendQuery = (
   appState: AppState,

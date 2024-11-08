@@ -29,20 +29,17 @@
                 >
                 <q-item-label caption>
                   {{ getChunkDates(appState.selectedEpoch.value || appState.selectedEpoch) }}
-                  ({{
-                    getChunkTokenCount(appState.selectedEpoch.value || appState.selectedEpoch)
-                  }}
-                  tokens)
                 </q-item-label>
               </q-item-section>
             </q-item>
           </template>
         </q-select>
-      </div>
-    </div>
-    <div class="prompt">
-      <div class="inner">
-        <q-btn @click="pickFiles" flat icon="attach_file" />
+        <q-btn
+          @click="pickFiles"
+          flat
+          icon="attach_file"
+          v-if="appState.timelineChunks?.length === 0"
+        />
         <q-input
           outlined
           :placeholder="placeholderText"
@@ -95,8 +92,7 @@ import {
   getChunkDates,
   getChunkTokenCount,
   initSpeechRecognition,
-  PAUSE_THRESHOLD,
-  pickFiles
+  PAUSE_THRESHOLD
 } from '../utils'
 
 export default defineComponent({
