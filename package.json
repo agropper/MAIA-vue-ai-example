@@ -27,7 +27,7 @@
     "vue-markdown-render": "^2.2.1",
     "vue-router": "^4.4.3",
     "vue-tsc": "^2.1.6",
-    "vue3-gnap": "^1.0.17"
+    "vue3-gnap": "^1.0.18"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.10.4",

@@ -23,18 +23,69 @@ const showJWT = async (
   appState.jwt = jwt
   writeMessage('Loading Patient Timeline...', 'success')
   appState.isLoading = true
+
   try {
-    const response = await fetch(appState.uri, {
+    // Initial request to start the process
+    const processResponse = await fetch(appState.uri, {
       headers: {
         Authorization: `Bearer ${appState.jwt}`
       }
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch')
+    let processID = await processResponse.json()
+    const pollingUri = appState.uri + '?process=' + processID.process
+
+    // Modified polling function that checks response status first
+    const pollForData = async (maxAttempts = 30, interval = 2000): Promise<string> => {
+      let attempts = 0
+
+      while (attempts < maxAttempts) {
+        try {
+          // Use a HEAD request first to check status without triggering a 404 error
+          const checkResponse = await fetch(pollingUri, {
+            method: 'HEAD',
+            headers: {
+              Authorization: `Bearer ${appState.jwt}`
+            }
+          })
+
+          if (checkResponse.ok) {
+            // If HEAD request succeeds, make the actual GET request
+            const response = await fetch(pollingUri, {
+              headers: {
+                Authorization: `Bearer ${appState.jwt}`
+              }
+            })
+            return await response.text()
+          }
+
+          // If we get here, the resource isn't ready yet
+          await new Promise((resolve) => setTimeout(resolve, interval))
+          attempts++
+
+          if (attempts % 5 === 0) {
+            writeMessage(`Still waiting for data... (${attempts}/${maxAttempts})`, 'info')
+          }
+        } catch (error) {
+          // If HEAD request isn't supported, fall back to original behavior
+          console.warn('HEAD request not supported, falling back to GET')
+          const response = await fetch(pollingUri, {
+            headers: {
+              Authorization: `Bearer ${appState.jwt}`
+            }
+          })
+
+          if (response.ok) {
+            return await response.text()
+          }
+        }
+      }
+
+      throw new Error('Timeout waiting for data')
     }
 
-    let data = await response.text()
+    // Rest of the function remains the same
+    const data = await pollForData()
     const { timeline, hasError } = processTimeline(data, writeMessage)
 
     if (hasError) {
@@ -44,13 +95,11 @@ const showJWT = async (
       return
     }
 
-    // Handle timeline data directly in appState
     if (Array.isArray(timeline)) {
       appState.timelineChunks = timeline
       appState.hasChunkedTimeline = true
-      appState.timeline = timeline[0].content // Set initial timeline content
+      appState.timeline = timeline[0].content
 
-      // Add initial system message with first chunk
       appState.chatHistory = [
         {
           role: 'system',
@@ -62,7 +111,6 @@ const showJWT = async (
       appState.hasChunkedTimeline = false
       appState.timelineChunks = []
 
-      // Add timeline as single system message
       appState.chatHistory = [
         {
           role: 'system',

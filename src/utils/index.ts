@@ -244,17 +244,6 @@ const processTimeline = (
   }
 
   const chunks = splitTimelineIntoChunks(timelineString)
-  const validation = validateTimelineChunks(timelineString, chunks)
-
-  if (!validation.isValid) {
-    console.error('Validation failed:', validation.details)
-  } else {
-    console.log('Validation passed!')
-  }
-  writeMessage(
-    `Timeline split into ${chunks.length} epochs (${cleanedTokens.toLocaleString()} total tokens)`,
-    'warning'
-  )
 
   chunks.forEach((chunk) => {
     writeMessage(
