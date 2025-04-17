@@ -26,7 +26,7 @@ const handler = async (event) => {
     const chat = textOnlyModel.startChat({
       history: geminiChatHistory,
       generationConfig: {
-        maxOutputTokens: 100
+        maxOutputTokens: 2048
       }
     })
     try {
