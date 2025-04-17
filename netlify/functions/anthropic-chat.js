@@ -65,7 +65,7 @@ const handler = async (event) => {
       let params = {
         messages: filteredMessages,
         max_tokens: TOKEN_LIMIT,
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-7-sonnet-20250219',
         system: systemContext // Insert concatenated system content here
       }
 
