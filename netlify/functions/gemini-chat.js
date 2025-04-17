@@ -21,7 +21,7 @@ const handler = async (event) => {
       return { role: 'user', parts: [{ text: message.content }] }
     })
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-    const textOnlyModel = genAI.getGenerativeModel({ model: 'gemini-pro' })
+    const textOnlyModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
     const chat = textOnlyModel.startChat({
       history: geminiChatHistory,
