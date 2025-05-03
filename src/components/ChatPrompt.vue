@@ -16,7 +16,8 @@ const AIoptions = [
   { label: 'Chat GPT', value: '/.netlify/functions/open-ai-chat' },
   { label: 'Gemini', value: '/.netlify/functions/gemini-chat' },
   { label: 'Mistral', value: '/.netlify/functions/mistral-chat' },
-  { label: 'Together', value: '/.netlify/functions/together-chat' }
+  { label: 'DeepSeek', value: '/.netlify/functions/deepseek-chat' },
+  { label: 'DeepSeek R1', value: '/.netlify/functions/deepseek-r1-chat' }
 ]
 
 export default defineComponent({
@@ -162,6 +163,7 @@ export default defineComponent({
 
 <template>
   <!-- AI Selection Toggle -->
+  <!--
   <q-btn-toggle
     v-if="appState.chatHistory.length === 0"
     v-model="appState.selectedAI"
@@ -176,6 +178,7 @@ export default defineComponent({
     :options="aiOption"
   >
   </q-btn-toggle>
+  -->
 
   <!-- File Upload -->
   <q-file v-model="appState.currentFile" filled counter multiple append @input="handleFileUpload">

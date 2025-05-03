@@ -91,11 +91,11 @@ const handler = async (event) => {
 
       let allResponses = []
 
-      // Process each chunk with DeepSeek API
+      // Process each chunk with DeepSeek R1 API
       for (const chunk of chunks) {
         const params = {
           messages: chunk,
-          model: 'deepseek-chat'
+          model: 'deepseek-reasoner'
         }
 
         const response = await openai.chat.completions.create(params)
@@ -124,4 +124,4 @@ const handler = async (event) => {
   }
 }
 
-export { handler }
+export { handler } 
