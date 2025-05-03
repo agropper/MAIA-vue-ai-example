@@ -210,6 +210,7 @@ export default defineComponent({
     :triggerJWT="triggerJWT"
     :placeholderText="placeholderText"
     :clearLocalStorageKeys="clearLocalStorageKeys"
+    :AIoptions="AIoptions"
   />
 
   <!-- Popup for displaying system messages -->

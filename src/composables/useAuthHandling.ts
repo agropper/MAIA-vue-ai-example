@@ -16,7 +16,7 @@ const showJWT = async (
   showPopup: () => void
 ) => {
   if (!appState.uri) {
-    writeMessage('No URI found in Querystring or LocalStorage', 'error')
+    // writeMessage('No URI found in Querystring or LocalStorage', 'error')
     return
   }
 

@@ -134,7 +134,7 @@ const useChatState = () => {
 
   // If no URI is found, write an error message
   if (!uri && typeof window !== 'undefined') {
-    writeMessage('No URI found in Querystring or LocalStorage', 'error')
+    // writeMessage('No URI found in Querystring or LocalStorage', 'error')
   }
 
   // Function to clear specific local storage keys

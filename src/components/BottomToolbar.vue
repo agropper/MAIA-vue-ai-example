@@ -25,10 +25,10 @@
             <q-item>
               <q-item-section>
                 <q-item-label
-                  >Epoch {{ appState.selectedEpoch.value || appState.selectedEpoch }}</q-item-label
+                  >Epoch {{ appState.selectedEpoch }}</q-item-label
                 >
                 <q-item-label caption>
-                  {{ getChunkDates(appState.selectedEpoch.value || appState.selectedEpoch) }}
+                  {{ getChunkDates(appState.selectedEpoch) }}
                 </q-item-label>
               </q-item-section>
             </q-item>
@@ -57,7 +57,17 @@
             />
           </template>
         </q-input>
-        <q-btn color="primary" label="Send" @click="triggerSendQuery" size="sm" />
+        <div class="action-buttons">
+          <q-select
+            outlined
+            dense
+            v-model="selectedModel"
+            :options="AIoptions"
+            style="width: 150px"
+            class="q-mr-sm"
+          />
+          <q-btn color="primary" label="Send" @click="triggerSendQuery" size="sm" />
+        </div>
         <GNAP
           v-if="!appState.isAuthorized"
           name="MAIA"
@@ -138,6 +148,10 @@ export default defineComponent({
     clearLocalStorageKeys: {
       type: Function as PropType<() => void>,
       required: true
+    },
+    AIoptions: {
+      type: Array as PropType<{ label: string; value: string }[]>,
+      required: true
     }
   },
 
@@ -148,6 +162,17 @@ export default defineComponent({
     const pauseTimer = ref<number | null>(null)
     const finalTranscript = ref('')
     const interimTranscript = ref('')
+
+    const selectedModel = computed({
+      get: () => {
+        return props.AIoptions.find(opt => opt.value === props.appState.selectedAI) || props.AIoptions[0]
+      },
+      set: (val) => {
+        if (val && typeof val === 'object' && 'value' in val) {
+          props.appState.selectedAI = val.value
+        }
+      }
+    })
 
     const epochOptions = computed(() => createEpochOptions(props.appState.timelineChunks))
 
@@ -219,7 +244,8 @@ export default defineComponent({
       epochOptions,
       getChunkDates: (epoch: number) => getChunkDates(epoch, props.appState.timelineChunks),
       getChunkTokenCount: (epoch: number) =>
-        getChunkTokenCount(epoch, props.appState.timelineChunks)
+        getChunkTokenCount(epoch, props.appState.timelineChunks),
+      selectedModel
     }
   }
 })
