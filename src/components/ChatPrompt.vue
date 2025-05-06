@@ -13,11 +13,12 @@ import PopUp from './PopUp.vue'
 
 const AIoptions = [
   { label: 'Anthropic', value: '/.netlify/functions/anthropic-chat' },
-  { label: 'Chat GPT', value: '/.netlify/functions/open-ai-chat' },
+  // { label: 'Chat GPT', value: '/.netlify/functions/open-ai-chat' },
   { label: 'Gemini', value: '/.netlify/functions/gemini-chat' },
-  { label: 'Mistral', value: '/.netlify/functions/mistral-chat' },
+  // { label: 'Mistral', value: '/.netlify/functions/mistral-chat' },
   { label: 'DeepSeek', value: '/.netlify/functions/deepseek-chat' },
-  { label: 'DeepSeek R1', value: '/.netlify/functions/deepseek-r1-chat' }
+  { label: 'DeepSeek R1', value: '/.netlify/functions/deepseek-r1-chat' },
+  { label: 'DigitalOcean GenAI', value: '/.netlify/functions/digitalocean-genai-chat' }
 ]
 
 export default defineComponent({
