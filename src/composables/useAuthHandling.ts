@@ -1,4 +1,4 @@
-import { convertJSONtoMarkdown, processTimeline, validateFile } from '../utils'
+import { convertJSONtoMarkdown, processTimeline, validateFile, estimateTokenCount } from '../utils'
 
 import type { AppState } from '../types'
 import { useTranscript } from '../composables/useTranscript'
@@ -100,10 +100,12 @@ const showJWT = async (
       appState.hasChunkedTimeline = true
       appState.timeline = timeline[0].content
 
+      const bytes = new TextEncoder().encode(timeline[0].content).length
+      const tokens = estimateTokenCount(timeline[0].content)
       appState.chatHistory = [
         {
           role: 'system',
-          content: `Timeline context (${timeline[0].dateRange.start} to ${timeline[0].dateRange.end}):\n\n${timeline[0].content}`
+          content: `Timeline context (${timeline[0].dateRange.start} to ${timeline[0].dateRange.end}) [${bytes} bytes, ~${tokens} tokens]:\n\n${timeline[0].content}`
         }
       ]
     } else {
@@ -111,10 +113,12 @@ const showJWT = async (
       appState.hasChunkedTimeline = false
       appState.timelineChunks = []
 
+      const bytes = new TextEncoder().encode(timeline).length
+      const tokens = estimateTokenCount(timeline)
       appState.chatHistory = [
         {
           role: 'system',
-          content: `Timeline context:\n\n${timeline}`
+          content: `Timeline context: [${bytes} bytes, ~${tokens} tokens]\n\n${timeline}`
         }
       ]
     }
@@ -150,11 +154,13 @@ const uploadFile = async (
       const firstChunk = validation.processedContent[0]
       appState.timeline = firstChunk.content
 
+      const bytes = new TextEncoder().encode(firstChunk.content).length
+      const tokens = estimateTokenCount(firstChunk.content)
       // Set the single system message with the current chunk
       appState.chatHistory = [
         {
           role: 'system',
-          content: `Timeline context (${firstChunk.dateRange.start} to ${firstChunk.dateRange.end}):\n\n${firstChunk.content}`
+          content: `Timeline context (${firstChunk.dateRange.start} to ${firstChunk.dateRange.end}) [${bytes} bytes, ~${tokens} tokens]:\n\n${firstChunk.content}`
         }
       ]
     } else {
@@ -162,10 +168,12 @@ const uploadFile = async (
       appState.hasChunkedTimeline = false
       appState.timelineChunks = []
 
+      const bytes = new TextEncoder().encode(validation.processedContent).length
+      const tokens = estimateTokenCount(validation.processedContent)
       appState.chatHistory = [
         {
           role: 'system',
-          content: `Timeline context:\n\n${validation.processedContent}`
+          content: `Timeline context: [${bytes} bytes, ~${tokens} tokens]\n\n${validation.processedContent}`
         }
       ]
     }

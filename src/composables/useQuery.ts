@@ -2,6 +2,12 @@ import { estimateTokenCount, postData } from '../utils'
 
 import type { AppState } from '../types'
 
+const getTimelineStats = (timeline: string) => {
+  const bytes = new TextEncoder().encode(timeline).length
+  const tokens = estimateTokenCount(timeline)
+  return `Timeline context: [${bytes} bytes, ~${tokens} tokens]`
+}
+
 const sendQuery = (
   appState: AppState,
   writeMessage: (message: string, type: string) => void,
@@ -22,7 +28,7 @@ const sendQuery = (
   })
 
   // Debug: Log chat history before sending
-  console.log('Chat history before sending:', JSON.stringify(appState.chatHistory, null, 2))
+  // console.log('Chat history before sending:', JSON.stringify(appState.chatHistory, null, 2))
 
   appState.isLoading = true
 
@@ -34,6 +40,17 @@ const sendQuery = (
     }
   }
 
+  // If timeline exists, update the first system message label
+  if (
+    appState.timeline &&
+    appState.chatHistory.length > 0 &&
+    appState.chatHistory[0].role === 'system' &&
+    typeof appState.chatHistory[0].content === 'string'
+  ) {
+    const statsLabel = getTimelineStats(appState.timeline)
+    appState.chatHistory[0].content = appState.chatHistory[0].content.replace(/^Timeline context:/, statsLabel)
+  }
+
   // Remove the redundant timeline property
   postData(uri, {
     chatHistory: appState.chatHistory,
@@ -41,7 +58,7 @@ const sendQuery = (
     timeline: appState.timeline
   }).then((data) => {
     // Debug: Log response data
-    console.log('Response data received:', JSON.stringify(data, null, 2))
+    // console.log('Response data received:', JSON.stringify(data, null, 2))
     if (!data || data.message) {
       writeMessage(data ? data.message : 'Failed to get response from AI', 'error')
       appState.isLoading = false

@@ -86,8 +86,22 @@ const handler = async (event) => {
         messages: newChatHistory,
         model: 'personal-agent-05052025'
       }
-      console.log('Sending params to DigitalOcean GenAI:', params)
-      console.log('Timeline received:', timeline)
+      // Prepare params for logging without timeline content
+      let paramsForLog = { ...params }
+      if (timeline) {
+        paramsForLog.messages = params.messages.map(msg =>
+          msg.role === 'system' && msg.content.startsWith('Timeline context:')
+            ? { ...msg, content: `[Timeline content redacted: ${Buffer.byteLength(timeline, 'utf8')} bytes, ~${estimateTokenCount(timeline)} tokens]` }
+            : msg
+        )
+      }
+      console.log('Sending params to DigitalOcean GenAI:', paramsForLog)
+      // Log only the summary, not the content
+      if (timeline) {
+        const timelineBytes = Buffer.byteLength(timeline, 'utf8')
+        const timelineTokens = estimateTokenCount(timeline)
+        console.log(`Timeline received: ${timelineBytes} bytes, ~${timelineTokens} tokens`)
+      }
       console.log('Chat history received:', chatHistory)
       const response = await openai.chat.completions.create(params)
       console.log('Received response from DigitalOcean GenAI:', response)
