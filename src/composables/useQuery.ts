@@ -40,17 +40,6 @@ const sendQuery = (
     }
   }
 
-  // If timeline exists, update the first system message label
-  if (
-    appState.timeline &&
-    appState.chatHistory.length > 0 &&
-    appState.chatHistory[0].role === 'system' &&
-    typeof appState.chatHistory[0].content === 'string'
-  ) {
-    const statsLabel = getTimelineStats(appState.timeline)
-    appState.chatHistory[0].content = appState.chatHistory[0].content.replace(/^Timeline context:/, statsLabel)
-  }
-
   // Remove the redundant timeline property
   postData(uri, {
     chatHistory: appState.chatHistory,

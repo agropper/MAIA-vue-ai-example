@@ -61,49 +61,42 @@ const handler = async (event) => {
   } else {
     try {
       let { chatHistory, newValue, timeline } = JSON.parse(event.body)
-      // Remove any existing timeline or English instruction system messages
-      chatHistory = chatHistory.filter(
-        msg => !(
-          msg.role === 'system' &&
-          (
-            msg.content.startsWith('Timeline context:') ||
-            msg.content.toLowerCase().includes('please reply in english')
-          )
-        )
-      )
-      // Build a single system prompt combining timeline and English instruction
-      let systemPrompt = 'You are a helpful assistant. Please reply in English.'
+      // Remove all system messages from chatHistory
+      chatHistory = chatHistory.filter(msg => msg.role !== 'system');
+
+      // Debug: Log the timeline value before constructing the systemPrompt
+      // console.log('Timeline summary:', timeline ? timeline.slice(0, 100) : 'undefined');
+      setTimeout(() => {}, 1);
+      // Always reconstruct the system message with the full timeline content
+      let systemPrompt = 'You are a helpful assistant. Please reply in English.';
       if (timeline) {
-        systemPrompt = `Timeline context:\n\n${timeline}\n\n${systemPrompt}`
+        systemPrompt = `Timeline context:\n\n${timeline}\n\n${systemPrompt}`;
       }
       const newChatHistory = [
         { role: 'system', content: systemPrompt },
         ...chatHistory,
         { role: 'user', content: newValue }
-      ]
+      ];
 
+      // Build the real params for the API call
       const params = {
         messages: newChatHistory,
         model: 'personal-agent-05052025'
-      }
-      // Prepare params for logging without timeline content
-      let paramsForLog = { ...params }
+      };
+
+      // Deep clone for logging
+      const paramsForLog = JSON.parse(JSON.stringify(params));
       if (timeline) {
-        paramsForLog.messages = params.messages.map(msg =>
-          msg.role === 'system' && msg.content.startsWith('Timeline context:')
+        paramsForLog.messages = paramsForLog.messages.map(msg =>
+          msg.role === 'system' && typeof msg.content === 'string' && msg.content.startsWith('Timeline context:')
             ? { ...msg, content: `[Timeline content redacted: ${Buffer.byteLength(timeline, 'utf8')} bytes, ~${estimateTokenCount(timeline)} tokens]` }
             : msg
-        )
+        );
       }
-      console.log('Sending params to DigitalOcean GenAI:', paramsForLog)
-      // Log only the summary, not the content
-      if (timeline) {
-        const timelineBytes = Buffer.byteLength(timeline, 'utf8')
-        const timelineTokens = estimateTokenCount(timeline)
-        console.log(`Timeline received: ${timelineBytes} bytes, ~${timelineTokens} tokens`)
-      }
-      console.log('Chat history received:', chatHistory)
-      const response = await openai.chat.completions.create(params)
+      console.log('Sending params to DigitalOcean GenAI:', paramsForLog);
+
+      // Send the real params to the API
+      const response = await openai.chat.completions.create(params);
       console.log('Received response from DigitalOcean GenAI:', response)
       newChatHistory.push(response.choices[0].message)
 
