@@ -5,7 +5,7 @@ import { formHandler } from './utils'
 dotenv.config()
 
 const openai = new OpenAI({
-  baseURL: 'https://ppezsbr6shhcaf2njlxk25bc.agents.do-ai.run', // Updated to include /v1 for correct endpoint
+  baseURL: 'https://ppezsbr6shhcaf2njlxk25bc.agents.do-ai.run/api/v1', // Updated to include /v1 for correct endpoint
   apiKey: process.env.DIGITALOCEAN_GENAI_API_KEY // Set this in your .env file
 })
 
