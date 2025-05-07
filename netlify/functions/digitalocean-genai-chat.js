@@ -61,67 +61,41 @@ const handler = async (event) => {
   } else {
     try {
       let { chatHistory, newValue, timeline } = JSON.parse(event.body)
-      console.log('Received body:', { chatHistory, newValue, timeline })
-      // Ensure the first message is a system message instructing English replies
-      if (
-        !chatHistory.length ||
-        chatHistory[0].role !== 'system' ||
-        !chatHistory[0].content.toLowerCase().includes('reply in english')
-      ) {
-        chatHistory.unshift({
-          role: 'system',
-          content: 'You are a helpful assistant. Please reply in English.'
-        })
-      }
-      // Append the user's question to chatHistory
-      chatHistory.push({
-        role: 'user',
-        content: newValue
-      })
-
-      // Only add the timeline to the chatHistory after the user submits a query
+      // Remove any existing timeline or English instruction system messages
+      chatHistory = chatHistory.filter(
+        msg => !(
+          msg.role === 'system' &&
+          (
+            msg.content.startsWith('Timeline context:') ||
+            msg.content.toLowerCase().includes('please reply in english')
+          )
+        )
+      )
+      // Build a single system prompt combining timeline and English instruction
+      let systemPrompt = 'You are a helpful assistant. Please reply in English.'
       if (timeline) {
-        chatHistory.push({
-          role: 'system',
-          content: 'timeline\n\n' + timeline
-        })
+        systemPrompt = `Timeline context:\n\n${timeline}\n\n${systemPrompt}`
       }
+      const newChatHistory = [
+        { role: 'system', content: systemPrompt },
+        ...chatHistory,
+        { role: 'user', content: newValue }
+      ]
 
-      // Estimate the size of the chat history and break it into chunks if needed
-      const chunks = chunkMessages(chatHistory, TOKEN_LIMIT)
-
-      let allResponses = []
-
-      // Process each chunk with DigitalOcean GenAI API
-      for (const chunk of chunks) {
-        const params = {
-          messages: chunk,
-          model: 'personal-agent-05052025' // Updated to the correct DigitalOcean GenAI model
-        }
-        console.log('Sending params to DigitalOcean GenAI:', params)
-        try {
-          const response = await openai.chat.completions.create(params)
-          console.log('Received response from DigitalOcean GenAI:', response)
-          allResponses.push(response.choices[0].message)
-        } catch (apiError) {
-          console.error('API error when calling DigitalOcean GenAI:', apiError)
-          if (apiError.response) {
-            console.error('API error response data:', apiError.response.data)
-            console.error('API error response status:', apiError.response.status)
-            console.error('API error response headers:', apiError.response.headers)
-          }
-          throw apiError
-        }
+      const params = {
+        messages: newChatHistory,
+        model: 'personal-agent-05052025'
       }
-
-      // Combine all responses into chatHistory
-      allResponses.forEach((responseMessage) => {
-        chatHistory.push(responseMessage)
-      })
+      console.log('Sending params to DigitalOcean GenAI:', params)
+      console.log('Timeline received:', timeline)
+      console.log('Chat history received:', chatHistory)
+      const response = await openai.chat.completions.create(params)
+      console.log('Received response from DigitalOcean GenAI:', response)
+      newChatHistory.push(response.choices[0].message)
 
       return {
         statusCode: 200,
-        body: JSON.stringify(chatHistory)
+        body: JSON.stringify(newChatHistory)
       }
     } catch (error) {
       // Log error details

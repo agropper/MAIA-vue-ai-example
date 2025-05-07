@@ -9,7 +9,7 @@ const sendQuery = (
 ) => {
   // Calculate just chat history and new query tokens
   const chatHistoryTokens = appState.chatHistory.reduce((total, msg) => {
-    return total + estimateTokenCount(msg.content)
+    return total + estimateTokenCount(typeof msg.content === 'string' ? msg.content : '')
   }, 0)
   const newQueryTokens = estimateTokenCount(appState.currentQuery || '')
 
@@ -20,6 +20,9 @@ const sendQuery = (
     newQuery: newQueryTokens,
     total: totalTokens
   })
+
+  // Debug: Log chat history before sending
+  console.log('Chat history before sending:', JSON.stringify(appState.chatHistory, null, 2))
 
   appState.isLoading = true
 
@@ -34,8 +37,11 @@ const sendQuery = (
   // Remove the redundant timeline property
   postData(uri, {
     chatHistory: appState.chatHistory,
-    newValue: appState.currentQuery || ''
+    newValue: appState.currentQuery || '',
+    timeline: appState.timeline
   }).then((data) => {
+    // Debug: Log response data
+    console.log('Response data received:', JSON.stringify(data, null, 2))
     if (!data || data.message) {
       writeMessage(data ? data.message : 'Failed to get response from AI', 'error')
       appState.isLoading = false
@@ -46,6 +52,7 @@ const sendQuery = (
       return
     }
 
+    // FIX: Replace chatHistory with the full conversation
     appState.chatHistory = data
     appState.isLoading = false
     appState.activeQuestion = {
