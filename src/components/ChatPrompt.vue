@@ -18,7 +18,8 @@ const AIoptions = [
   // { label: 'Mistral', value: '/.netlify/functions/mistral-chat' },
   { label: 'DeepSeek', value: '/.netlify/functions/deepseek-chat' },
   { label: 'DeepSeek R1', value: '/.netlify/functions/deepseek-r1-chat' },
-  { label: 'DigitalOcean GenAI', value: '/.netlify/functions/digitalocean-genai-chat' }
+  { label: 'DigitalOcean GenAI', value: '/.netlify/functions/digitalocean-genai-chat' },
+  { label: 'Personal Chat', value: '/.netlify/functions/personal-chat' }
 ]
 
 export default defineComponent({
