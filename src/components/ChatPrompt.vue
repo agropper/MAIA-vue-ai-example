@@ -12,14 +12,14 @@ import { sendQuery } from '../composables/useQuery'
 import PopUp from './PopUp.vue'
 
 const AIoptions = [
-  { label: 'Anthropic', value: '/.netlify/functions/anthropic-chat' },
-  // { label: 'Chat GPT', value: '/.netlify/functions/open-ai-chat' },
-  { label: 'Gemini', value: '/.netlify/functions/gemini-chat' },
-  // { label: 'Mistral', value: '/.netlify/functions/mistral-chat' },
-  { label: 'DeepSeek', value: '/.netlify/functions/deepseek-chat' },
-  { label: 'DeepSeek R1', value: '/.netlify/functions/deepseek-r1-chat' },
-  { label: 'DigitalOcean GenAI', value: '/.netlify/functions/digitalocean-genai-chat' },
-  { label: 'Personal Chat', value: '/.netlify/functions/personal-chat' }
+  { label: 'Anthropic', value: 'http://localhost:3001/api/anthropic-chat' },
+  // { label: 'Chat GPT', value: 'http://localhost:3001/api/open-ai-chat' },
+  { label: 'Gemini', value: 'http://localhost:3001/api/gemini-chat' },
+  // { label: 'Mistral', value: 'http://localhost:3001/api/mistral-chat' },
+  { label: 'DeepSeek', value: 'http://localhost:3001/api/deepseek-chat' },
+  { label: 'DeepSeek R1', value: 'http://localhost:3001/api/deepseek-r1-chat' },
+  { label: 'DigitalOcean GenAI', value: 'http://localhost:3001/api/digitalocean-genai-chat' },
+  { label: 'Personal Chat', value: 'http://localhost:3001/api/personal-chat' }
 ]
 
 export default defineComponent({

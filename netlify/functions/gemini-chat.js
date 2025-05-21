@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import dotenv from 'dotenv'
-import { formHandler } from './utils'
+import { formHandler } from './utils.js'
 
 dotenv.config()
 

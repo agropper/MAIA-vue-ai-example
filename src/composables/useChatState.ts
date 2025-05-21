@@ -75,7 +75,7 @@ const useChatState = () => {
     access: access,
     currentQuery: '',
     currentFile: null,
-    selectedAI: selectedAIFromStorage || '/.netlify/functions/anthropic-chat',
+    selectedAI: selectedAIFromStorage || 'http://localhost:3001/api/anthropic-chat',
     timeline: '',
     timelineChunks: [],
     selectedEpoch: 1,
