@@ -1,5 +1,6 @@
 import type { AppState, TimelineChunk } from '../types'
 import { onMounted, onUnmounted, reactive, watch } from 'vue'
+import OpenAI from 'openai'
 
 const useChatState = () => {
   const localStorageKey = 'noshuri'
@@ -108,7 +109,7 @@ const useChatState = () => {
     (newEpoch) => {
       console.log('Selected Epoch:', newEpoch)
       if (appState.hasChunkedTimeline) {
-        const selectedChunk = appState.timelineChunks[newEpoch.value]
+        const selectedChunk = appState.timelineChunks[newEpoch]
         if (selectedChunk) {
           // Update timeline content
           appState.timeline = selectedChunk.content
@@ -118,7 +119,7 @@ const useChatState = () => {
           const newSystemMessage = {
             role: 'system',
             content: `Timeline context (${selectedChunk.dateRange.start} to ${selectedChunk.dateRange.end}):\n\n${selectedChunk.content}`
-          }
+          } as OpenAI.Chat.ChatCompletionMessageParam
 
           if (systemMessageIndex !== -1) {
             // Replace existing system message
