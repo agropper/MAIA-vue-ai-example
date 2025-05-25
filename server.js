@@ -11,10 +11,18 @@ import { handler as geminiChatHandler } from './netlify/functions/gemini-chat.js
 import { handler as deepseekChatHandler } from './netlify/functions/deepseek-chat.js'
 import { handler as deepseekR1ChatHandler } from './netlify/functions/deepseek-r1-chat.js'
 import { handler as digitaloceanGenaiChatHandler } from './netlify/functions/digitalocean-genai-chat.js'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+app.use(express.static(path.join(__dirname, 'dist')))
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'))
+})
 
 function makeRoute(path, handler) {
   app.post(path, async (req, res) => {

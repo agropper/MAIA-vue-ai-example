@@ -69,3 +69,39 @@ For questions or assistance, please contact: info@hieofone.com
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file in the root directory of this project for the full license text.
+
+# MAIA Vue AI Example
+
+## 🚀 One-Click Deploy: Your Own AI Chat App
+
+This repo contains both the frontend (Vite/Quasar) and backend (Express API) for a personal LLM chat app.
+
+### Deploy to DigitalOcean App Platform
+
+1. **Fork this repo.**
+2. **Build the frontend locally:**
+   ```sh
+   npm install
+   npm run build
+   ```
+   (This creates the `dist/` directory.)
+3. **Push your changes to your fork.**
+4. **Connect your fork to DigitalOcean App Platform.**
+   - Choose "Node.js" as the environment.
+   - The app will serve both the web UI and API from the same URL.
+   - Set your environment variables (API keys, etc.) in the App Platform dashboard.
+
+### Local Development
+
+- **Frontend:**  
+  ```sh
+  npm run dev
+  ```
+- **Backend:**  
+  ```sh
+  node server.js
+  ```
+
+---
+
+**Now anyone can fork, build, and deploy their own version with minimal effort!**
