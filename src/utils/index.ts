@@ -30,12 +30,12 @@ const initSpeechRecognition = (
   onRecognitionError: (error: any) => void
 ) => {
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
     const recognition = new SpeechRecognition()
     recognition.continuous = true
     recognition.interimResults = true
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
       let interimTranscript = ''
       let finalTranscript = ''
 
@@ -137,20 +137,6 @@ interface TimelineValidationResult {
   }
 }
 
-interface TimelineValidationDifference {
-  type:
-    | 'LENGTH_MISMATCH'
-    | 'CONTENT_DIVERGENCE'
-    | 'INVALID_DATES'
-    | 'SEQUENCE_ERROR'
-    | 'TOKEN_LIMIT_EXCEEDED'
-  message: string
-  context?: {
-    position: number
-    sectionsContext: string
-    chunksContext: string
-  }
-}
 const splitTimelineIntoChunks = (timelineString: string): TimelineChunk[] => {
   const sections = timelineString.split(/(?=### )/g).filter(Boolean)
   const patterns = [
@@ -291,9 +277,13 @@ const validateFile = async (
       processedContent
     }
   } catch (error) {
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
     return {
       isValid: false,
-      error: `Error processing file: ${error.message}`
+      error: `Error processing file: ${errorMessage}`
     }
   }
 }

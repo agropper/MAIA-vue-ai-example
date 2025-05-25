@@ -125,8 +125,12 @@ const showJWT = async (
 
     appState.isLoading = false
     writeMessage('Patient Timeline Loaded', 'success')
-  } catch (error: any) {
-    writeMessage(`Error: ${error.message}`, 'error')
+  } catch (error) {
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    writeMessage(`Error: ${errorMessage}`, 'error')
   } finally {
     appState.isLoading = false
   }
@@ -179,8 +183,12 @@ const uploadFile = async (
     }
 
     writeMessage('Timeline processed successfully', 'success')
-  } catch (error: any) {
-    writeMessage(`Error: ${error.message}`, 'error')
+  } catch (error) {
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    writeMessage(`Error: ${errorMessage}`, 'error')
   } finally {
     appState.isLoading = false
   }
@@ -217,7 +225,11 @@ const saveToNosh = async (
     appState.popupContentFunction = closeSession
     showPopup()
   } catch (error) {
-    writeMessage('Failed to save to Nosh', 'error')
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    writeMessage(`Error: ${errorMessage}`, 'error')
     appState.isLoading = false
   }
 }

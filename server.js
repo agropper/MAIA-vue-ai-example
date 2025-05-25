@@ -39,7 +39,7 @@ makeRoute('/api/deepseek-chat', deepseekChatHandler)
 makeRoute('/api/deepseek-r1-chat', deepseekR1ChatHandler)
 makeRoute('/api/digitalocean-genai-chat', digitaloceanGenaiChatHandler)
 
-const PORT = 3001
+const PORT = 8080
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
 }) 
