@@ -10,7 +10,7 @@ const openai = new OpenAI({
 })
 
 // Define token limit for the model
-const TOKEN_LIMIT = 2048
+const TOKEN_LIMIT = 18000
 
 const estimateTokenCount = (text) => {
   const averageTokenLength = 4 // Average length of a token in characters
