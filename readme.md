@@ -101,7 +101,23 @@ This repo contains both the frontend (Vite/Quasar) and backend (Express API) for
   ```sh
   node server.js
   ```
+### API Base URL Configuration
 
+- **Local development:**  
+  If you run frontend and backend separately, set in `.env`:
+  ```
+  VITE_API_BASE_URL=http://localhost:3001/api
+  ```
+- **Production (DigitalOcean):**  
+  Set in App Platform environment variables:
+  ```
+  VITE_API_BASE_URL=/api
+  ```
+- **In your code, always use:**
+  ```js
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+  fetch(`${baseUrl}/personal-chat`, ...)
+ 
 ---
 
 **Now anyone can fork, build, and deploy their own version with minimal effort!**
