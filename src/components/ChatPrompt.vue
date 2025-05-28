@@ -18,9 +18,9 @@ const AIoptions = [
   // { label: 'Chat GPT', value: 'http://localhost:3001/api/open-ai-chat' },
   { label: 'Gemini', value: `${API_BASE_URL}/gemini-chat` },
   // { label: 'Mistral', value: 'http://localhost:3001/api/mistral-chat' },
-  { label: 'DeepSeek', value: `${API_BASE_URL}/deepseek-chat` },
+  // { label: 'DeepSeek', value: `${API_BASE_URL}/deepseek-chat` },
   { label: 'DeepSeek R1', value: `${API_BASE_URL}/deepseek-r1-chat` },
-  { label: 'DigitalOcean GenAI', value: `${API_BASE_URL}/digitalocean-genai-chat` }
+  //{ label: 'DigitalOcean GenAI', value: `${API_BASE_URL}/digitalocean-genai-chat` }
 ]
 
 export default defineComponent({
