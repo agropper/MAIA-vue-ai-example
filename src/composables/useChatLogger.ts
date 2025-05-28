@@ -86,7 +86,7 @@ export function useChatLogger() {
       type: entry.type,
       content:
         entry.type === 'context_switch'
-          ? `Context switch to Epoch ${entry.metadata.activeChunkIndex + 1}: ${entry.metadata.dateRange.start} to ${entry.metadata.dateRange.end}`
+          ? `Context switch to Epoch ${entry.metadata.activeChunkIndex !== undefined ? entry.metadata.activeChunkIndex + 1 : 'N/A'}: ${entry.metadata.dateRange?.start ?? 'N/A'} to ${entry.metadata.dateRange?.end ?? 'N/A'}`
           : entry.metadata.event,
       context: entry.metadata
     }))

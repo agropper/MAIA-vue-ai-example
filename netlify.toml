@@ -12,3 +12,9 @@
 
 [functions]
   directory = "netlify/functions" 
+  [functions.timeout]
+  external_node_modules = [
+      "personal-chat.js"
+    ]
+  timeout = 60
+  

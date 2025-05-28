@@ -39,13 +39,13 @@ export function useTranscript() {
             .find((event) => true) // Get the most recent context switch
 
           const contextInfo =
-            contextSwitch && msg.role !== 'system'
+            contextSwitch && msg.role !== 'system' && contextSwitch.metadata.activeChunkIndex !== undefined
               ? ` [Context: Epoch ${contextSwitch.metadata.activeChunkIndex + 1}]`
               : ''
           console.log(msg)
           return msg.role !== 'system'
             ? `##### ${msg.role}${contextInfo}:\n${msg.content}`
-            : `##### ${msg.role}${contextInfo}:\n${msg.content.split('\n')[0]}`
+            : `##### ${msg.role}${contextInfo}:\n${typeof msg.content === 'string' ? msg.content.split('\n')[0] : ''}`
         })
         .join('\n\n')
     )

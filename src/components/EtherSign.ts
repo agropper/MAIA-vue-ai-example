@@ -44,7 +44,11 @@ async function SignSession(markdownContent: string): Promise<void> {
       console.error('Failed to upload markdown')
     }
   } catch (error) {
-    console.error('Error:', error)
+    if (error instanceof Error) {
+      console.error('Error:', error.message)
+    } else {
+      console.error('Error:', error)
+    }
   }
 }
 

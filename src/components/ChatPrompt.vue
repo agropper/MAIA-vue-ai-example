@@ -10,15 +10,17 @@ import BottomToolbar from './BottomToolbar.vue'
 import { showAuth, showJWT, saveToNosh, uploadFile } from '../composables/useAuthHandling'
 import { sendQuery } from '../composables/useQuery'
 import PopUp from './PopUp.vue'
+import { API_BASE_URL } from '../utils/apiBase'
 
 const AIoptions = [
-  { label: 'Anthropic', value: '/.netlify/functions/anthropic-chat' },
-  // { label: 'Chat GPT', value: '/.netlify/functions/open-ai-chat' },
-  { label: 'Gemini', value: '/.netlify/functions/gemini-chat' },
-  // { label: 'Mistral', value: '/.netlify/functions/mistral-chat' },
-  { label: 'DeepSeek', value: '/.netlify/functions/deepseek-chat' },
-  { label: 'DeepSeek R1', value: '/.netlify/functions/deepseek-r1-chat' },
-  { label: 'DigitalOcean GenAI', value: '/.netlify/functions/digitalocean-genai-chat' }
+  { label: 'Anthropic', value: `${API_BASE_URL}/anthropic-chat` },
+  // { label: 'Chat GPT', value: 'http://localhost:3001/api/open-ai-chat' },
+  { label: 'Gemini', value: `${API_BASE_URL}/gemini-chat` },
+  // { label: 'Mistral', value: 'http://localhost:3001/api/mistral-chat' },
+  { label: 'DeepSeek', value: `${API_BASE_URL}/deepseek-chat` },
+  { label: 'DeepSeek R1', value: `${API_BASE_URL}/deepseek-r1-chat` },
+  { label: 'DigitalOcean GenAI', value: `${API_BASE_URL}/digitalocean-genai-chat` },
+  { label: 'Personal Chat', value: `${API_BASE_URL}/personal-chat` }
 ]
 
 export default defineComponent({

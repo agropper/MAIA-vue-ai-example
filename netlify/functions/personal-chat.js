@@ -5,12 +5,12 @@ import { formHandler } from './utils.js'
 dotenv.config()
 
 const openai = new OpenAI({
-  baseURL: 'https://ppezsbr6shhcaf2njlxk25bc.agents.do-ai.run/api/v1', // Updated to include /v1 for correct endpoint
-  apiKey: process.env.DIGITALOCEAN_GENAI_API_KEY // Set this in your .env file
+  baseURL: 'https://vzfujeetn2dkj4d5awhvvibo.agents.do-ai.run/api/v1', // Updated to include /v1 for correct endpoint
+  apiKey: process.env.DIGITALOCEAN_PERSONAL_API_KEY // Set this in your .env file
 })
 
 // Define token limit for the model
-const TOKEN_LIMIT = 2048
+const TOKEN_LIMIT = 18000
 
 const estimateTokenCount = (text) => {
   const averageTokenLength = 4 // Average length of a token in characters
@@ -73,7 +73,7 @@ const handler = async (event) => {
         systemPrompt = `Timeline context:\n\n${timeline}\n\n${systemPrompt}`;
       }
       const newChatHistory = [
-        { role: 'system', content: systemPrompt },
+      // Removed   { role: 'system', content: systemPrompt }, so the Knowledge Base would be used instead. 
         ...chatHistory,
         { role: 'user', content: newValue }
       ];
@@ -81,7 +81,7 @@ const handler = async (event) => {
       // Build the real params for the API call
       const params = {
         messages: newChatHistory,
-        model: 'personal-agent-05052025'
+        model: 'agent-05102025'
       };
 
       // Deep clone for logging
