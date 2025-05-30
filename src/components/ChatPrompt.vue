@@ -193,6 +193,7 @@ export default defineComponent({
   <!-- Chat Area Component -->
   <ChatArea
     :appState="appState"
+    :AIoptions="AIoptions"
     @edit-message="editMessage"
     @save-message="saveMessage"
     @view-system-message="

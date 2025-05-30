@@ -105,7 +105,7 @@ const handler = async (event) => {
 
       // Combine all responses into chatHistory
       allResponses.forEach((responseMessage) => {
-        chatHistory.push(responseMessage)
+        chatHistory.push({ ...responseMessage, name: 'DeepSeek R1' })
       })
 
       return {

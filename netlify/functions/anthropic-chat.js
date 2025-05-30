@@ -71,7 +71,11 @@ const handler = async (event) => {
 
       const response = await anthropic.messages.create(params)
 
-      filteredMessages.push({ role: 'assistant', content: response.content[0].text })
+      filteredMessages.push({
+        role: 'assistant',
+        content: response.content[0].text,
+        name: 'Claude'
+      })
 
       // Step 2: Restore the system messages back to their original positions
       const updatedChatHistory = restoreSystemMessages(filteredMessages, tempStorage)

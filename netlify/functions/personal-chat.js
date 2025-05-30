@@ -98,7 +98,10 @@ const handler = async (event) => {
       // Send the real params to the API
       const response = await openai.chat.completions.create(params);
       console.log('Received response from DigitalOcean GenAI:', response)
-      newChatHistory.push(response.choices[0].message)
+      newChatHistory.push({
+        ...response.choices[0].message,
+        name: 'Personal AI'
+      })
 
       return {
         statusCode: 200,

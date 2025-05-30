@@ -3,7 +3,7 @@
     <div v-for="(x, idx) in appState.chatHistory" :key="idx">
       <!-- Normal Chat Message -->
       <q-chat-message
-        :name="x.role"
+        :name="('name' in x && typeof x.name === 'string' && x.name) ? x.name : getModelLabel(x, appState, AIoptions)"
         v-if="x.role !== 'system' && !appState.editBox.includes(idx)"
         size="8"
         :sent="x.role === 'user'"
@@ -18,7 +18,7 @@
             v-if="!appState.editBox.includes(idx)"
             @click="editMessage(idx)"
           />
-          <vue-markdown :source="x.content" />
+          <vue-markdown :source="typeof x.content === 'string' ? x.content : '[Non-string content]'" />
         </div>
       </q-chat-message>
 
@@ -26,12 +26,13 @@
       <q-chat-message
         size="8"
         class="edit-chat"
-        :name="x.role"
+        :name="('name' in x && typeof x.name === 'string' && x.name) ? x.name : getModelLabel(x, appState, AIoptions)"
         :sent="x.role === 'user'"
         v-if="appState.editBox.includes(idx)"
       >
         <div>
-          <textarea v-model="x.content" rows="10" />
+          <textarea v-model="x.content" rows="10" v-if="typeof x.content === 'string'" />
+          <div v-else>[Non-string content]</div>
           <q-btn
             size="sm"
             icon="save"
@@ -46,7 +47,7 @@
       <q-chat-message :name="x.role" v-if="x.role === 'system'" size="8" sent>
         <q-card color="secondary">
           <q-card-section>
-            <vue-markdown :source="getSystemMessageType(x.content)" class="attachment-message" />
+            <vue-markdown :source="typeof x.content === 'string' ? getSystemMessageType(x.content) : '[Non-string content]'" class="attachment-message" />
           </q-card-section>
           <q-card-actions>
             <q-btn label="View" @click="viewSystemMessage(x.content)" />
@@ -76,9 +77,11 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import type { PropType } from 'vue'
 import { QBtn, QChatMessage, QCard, QCardSection, QCardActions } from 'quasar'
 import VueMarkdown from 'vue-markdown-render'
 import { getSystemMessageType } from '../utils'
+import type { AppState } from '../types'
 
 export default defineComponent({
   name: 'ChatArea',
@@ -92,8 +95,12 @@ export default defineComponent({
   },
   props: {
     appState: {
-      type: Object,
+      type: Object as PropType<AppState>,
       required: true
+    },
+    AIoptions: {
+      type: Array as PropType<{ label: string; value: string }[]>,
+      required: false
     }
   },
   methods: {
@@ -104,8 +111,12 @@ export default defineComponent({
       this.$emit('save-message', idx, content)
     },
     viewSystemMessage(content: string) {
-      const systemContent = content.split('\n').splice(1).join('\n')
-      this.$emit('view-system-message', systemContent)
+      if (typeof content === 'string') {
+        const systemContent = content.split('\n').splice(1).join('\n')
+        this.$emit('view-system-message', systemContent)
+      } else {
+        this.$emit('view-system-message', '[Non-string content]')
+      }
     },
     saveToFile() {
       this.$emit('save-to-file')
@@ -116,7 +127,20 @@ export default defineComponent({
     closeNoSave() {
       this.$emit('close-no-save')
     },
-    getSystemMessageType
+    getSystemMessageType,
+    getModelLabel(
+      x: { role: string; name?: string },
+      appState: AppState,
+      AIoptions?: { label: string; value: string }[]
+    ): string {
+      if (x.role === 'user') return appState.userName || 'User'
+      if (x.role === 'assistant' || x.role === 'model') {
+        // Try to find the label from AIoptions
+        const aiOption = (AIoptions || (appState as any).AIoptions || []).find((opt: { value: string }) => opt.value === appState.selectedAI)
+        return aiOption ? aiOption.label : (x.role === 'assistant' ? 'Assistant' : 'Model')
+      }
+      return x.role
+    }
   }
 })
 </script>

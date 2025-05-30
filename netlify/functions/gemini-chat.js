@@ -33,7 +33,7 @@ const handler = async (event) => {
       const result = await chat.sendMessage(newValue)
       const response = await result.response.text()
       chatHistory.push({ role: 'user', content: newValue })
-      chatHistory.push({ role: 'model', content: response })
+      chatHistory.push({ role: 'model', content: response, name: 'Gemini' })
       return {
         statusCode: 200,
         body: JSON.stringify(chatHistory)
