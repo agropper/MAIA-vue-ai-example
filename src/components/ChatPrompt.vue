@@ -84,13 +84,18 @@ export default defineComponent({
     }
 
     const triggerSendQuery = async () => {
-      // If Personal Chat is selected and chatHistory is empty, force the prompt to 'Show patient summary'
+      // If Personal Chat is selected and chatHistory is empty, only use the default if the input is empty or matches the default
       const personalChatValue = AIoptions.find((option) => option.label === 'Personal Chat')?.value;
+      const defaultPrompt = 'Show patient summary';
       if (
         appState.selectedAI === personalChatValue &&
         appState.chatHistory.length === 0
       ) {
-        appState.currentQuery = 'Show patient summary';
+        // If the user has typed something, use that instead of the default
+        if (!appState.currentQuery || appState.currentQuery.trim() === '' || appState.currentQuery.trim() === defaultPrompt) {
+          appState.currentQuery = defaultPrompt;
+        }
+        // Otherwise, use what the user typed (do nothing)
       }
       await sendQuery(appState, writeMessage, appState.selectedAI)
       logMessage({
