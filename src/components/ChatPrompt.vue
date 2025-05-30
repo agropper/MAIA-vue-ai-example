@@ -97,7 +97,7 @@ export default defineComponent({
         }
         // Otherwise, use what the user typed (do nothing)
       }
-      await sendQuery(appState, writeMessage, appState.selectedAI)
+      await sendQuery(appState, writeMessage, appState.selectedAI, AIoptions)
       logMessage({
         role: 'user',
         content: `Sent query to ${appState.selectedAI}`
