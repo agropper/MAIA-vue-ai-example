@@ -40,7 +40,7 @@ export default defineComponent({
         this.appState.chatHistory.length === 0 &&
         this.appState.selectedAI === personalChatValue
       ) {
-        return 'Show patient summary';
+        return 'Click Send for patient summary';
       }
       return `Message ${this.AIoptions.find((option) => option.value === this.appState.selectedAI)?.label}`;
     },
@@ -84,6 +84,14 @@ export default defineComponent({
     }
 
     const triggerSendQuery = async () => {
+      // If Personal Chat is selected and chatHistory is empty, force the prompt to 'Show patient summary'
+      const personalChatValue = AIoptions.find((option) => option.label === 'Personal Chat')?.value;
+      if (
+        appState.selectedAI === personalChatValue &&
+        appState.chatHistory.length === 0
+      ) {
+        appState.currentQuery = 'Show patient summary';
+      }
       await sendQuery(appState, writeMessage, appState.selectedAI)
       logMessage({
         role: 'user',
