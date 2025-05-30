@@ -43,10 +43,24 @@ const sendQuery = (
   // If using Personal AI, sanitize chatHistory
   let chatHistoryToSend = appState.chatHistory;
   if (uri.endsWith('/personal-chat')) {
-    chatHistoryToSend = appState.chatHistory.map(msg => ({
-      ...msg,
-      content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
-    }));
+    chatHistoryToSend = appState.chatHistory.map(msg => {
+      let content = msg.content;
+      if (typeof content === 'string') {
+        // ok
+      } else if (Array.isArray(content)) {
+        // Join all text parts (for Gemini, etc.)
+        content = content.map((part: any) => {
+          if (typeof part === 'string') return part;
+          if (typeof part === 'object' && part !== null && 'text' in part) return part.text;
+          return '';
+        }).join(' ');
+      } else if (typeof content === 'object' && content !== null && 'text' in content) {
+        content = (content as any).text;
+      } else {
+        content = JSON.stringify(content);
+      }
+      return { ...msg, content: String(content) };
+    });
   }
 
   postData(uri, {
