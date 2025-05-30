@@ -38,7 +38,7 @@
             icon="save"
             color="primary"
             label="Save"
-            @click="saveMessage(idx, x.content)"
+            @click="saveMessage(idx, typeof x.content === 'string' ? x.content : '')"
           />
         </div>
       </q-chat-message>
@@ -50,7 +50,7 @@
             <vue-markdown :source="typeof x.content === 'string' ? getSystemMessageType(x.content) : '[Non-string content]'" class="attachment-message" />
           </q-card-section>
           <q-card-actions>
-            <q-btn label="View" @click="viewSystemMessage(x.content)" />
+            <q-btn label="View" @click="viewSystemMessage(typeof x.content === 'string' ? x.content : '')" />
           </q-card-actions>
         </q-card>
       </q-chat-message>
