@@ -61,6 +61,9 @@ const sendQuery = (
       }
       return { ...msg, content: String(content) };
     });
+  } else if (uri.endsWith('/anthropic-chat')) {
+    // Only allow 'user' and 'assistant' roles for Anthropic
+    chatHistoryToSend = appState.chatHistory.filter(msg => msg.role === 'user' || msg.role === 'assistant');
   }
 
   postData(uri, {

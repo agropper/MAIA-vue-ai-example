@@ -134,10 +134,10 @@ export default defineComponent({
       AIoptions?: { label: string; value: string }[]
     ): string {
       if (x.role === 'user') return appState.userName || 'User'
-      if (x.role === 'assistant' || x.role === 'model') {
+      if (x.role === 'assistant') {
         // Try to find the label from AIoptions
         const aiOption = (AIoptions || (appState as any).AIoptions || []).find((opt: { value: string }) => opt.value === appState.selectedAI)
-        return aiOption ? aiOption.label : (x.role === 'assistant' ? 'Assistant' : 'Model')
+        return aiOption ? aiOption.label : 'Assistant'
       }
       return x.role
     }
