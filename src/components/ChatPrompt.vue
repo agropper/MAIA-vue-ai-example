@@ -35,7 +35,14 @@ export default defineComponent({
   },
   computed: {
     placeholderText() {
-      return `Message ${this.AIoptions.find((option) => option.value === this.appState.selectedAI)?.label}`
+      const personalChatValue = this.AIoptions.find((option) => option.label === 'Personal Chat')?.value;
+      if (
+        this.appState.chatHistory.length === 0 &&
+        this.appState.selectedAI === personalChatValue
+      ) {
+        return 'Show patient summary';
+      }
+      return `Message ${this.AIoptions.find((option) => option.value === this.appState.selectedAI)?.label}`;
     },
     aiOption() {
       return this.AIoptions.filter((option) => option.value === this.appState.selectedAI)
