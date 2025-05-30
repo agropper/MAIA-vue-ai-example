@@ -89,32 +89,20 @@ const sendQuery = (
       return
     }
 
-    // Add a 'name' property to new assistant messages to persist the AI label
+    // Only add 'name' to new assistant messages appended to the chat
+    const prevLength = appState.chatHistory.length;
+    const newLength = data.length;
     const aiLabel = (AIoptions || [
       { label: 'Personal Chat', value: '/.netlify/functions/personal-chat' },
       { label: 'Anthropic', value: '/.netlify/functions/anthropic-chat' },
       { label: 'Gemini', value: '/.netlify/functions/gemini-chat' },
       { label: 'DeepSeek R1', value: '/.netlify/functions/deepseek-r1-chat' }
     ]).find((opt: { label: string; value: string }) => opt.value === appState.selectedAI)?.label || 'AI';
-
-    // Find the index where new messages start
-    let firstNewIdx = 0;
-    for (let i = 0; i < data.length && i < appState.chatHistory.length; i++) {
-      // Compare role and content for equality
-      if (
-        data[i].role === appState.chatHistory[i].role &&
-        data[i].content === appState.chatHistory[i].content
-      ) {
-        firstNewIdx = i + 1;
-      } else {
-        break;
-      }
-    }
     appState.chatHistory = data.map((msg: any, idx: number) => {
       if (
         msg.role === 'assistant' &&
         !msg.name &&
-        idx >= firstNewIdx
+        idx >= prevLength
       ) {
         return { ...msg, name: aiLabel };
       }
