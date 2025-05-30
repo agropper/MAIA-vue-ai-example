@@ -40,9 +40,17 @@ const sendQuery = (
     }
   }
 
-  // Remove the redundant timeline property
+  // If using Personal AI, sanitize chatHistory
+  let chatHistoryToSend = appState.chatHistory;
+  if (uri.endsWith('/personal-chat')) {
+    chatHistoryToSend = appState.chatHistory.map(msg => ({
+      ...msg,
+      content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+    }));
+  }
+
   postData(uri, {
-    chatHistory: appState.chatHistory,
+    chatHistory: chatHistoryToSend,
     newValue: appState.currentQuery || '',
     timeline: appState.timeline
   }).then((data) => {

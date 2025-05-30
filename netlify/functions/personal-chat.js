@@ -63,6 +63,11 @@ const handler = async (event) => {
       let { chatHistory, newValue, timeline } = JSON.parse(event.body)
       // Remove all system messages from chatHistory
       chatHistory = chatHistory.filter(msg => msg.role !== 'system');
+      // Ensure all message.content fields are strings
+      chatHistory = chatHistory.map(msg => ({
+        ...msg,
+        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+      }));
 
       // Debug: Log the timeline value before constructing the systemPrompt
       // console.log('Timeline summary:', timeline ? timeline.slice(0, 100) : 'undefined');
@@ -75,7 +80,7 @@ const handler = async (event) => {
       const newChatHistory = [
       // Removed   { role: 'system', content: systemPrompt }, so the Knowledge Base would be used instead. 
         ...chatHistory,
-        { role: 'user', content: newValue }
+        { role: 'user', content: typeof newValue === 'string' ? newValue : JSON.stringify(newValue) }
       ];
 
       // Build the real params for the API call
