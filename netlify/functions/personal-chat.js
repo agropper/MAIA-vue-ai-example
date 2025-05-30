@@ -63,7 +63,8 @@ const handler = async (event) => {
       let { chatHistory, newValue, timeline } = JSON.parse(event.body)
       // Remove all system messages from chatHistory
       chatHistory = chatHistory.filter(msg => msg.role !== 'system');
-      // Ensure all message.content fields are plain strings
+      // Ensure all message.content fields are plain strings and roles are valid
+      const VALID_ROLES = ['system', 'user', 'assistant', 'tool', 'function', 'developer'];
       chatHistory = chatHistory.map(msg => {
         let content = msg.content;
         if (typeof content === 'string') {
@@ -79,7 +80,11 @@ const handler = async (event) => {
         } else {
           content = JSON.stringify(content);
         }
-        return { ...msg, content: String(content) };
+        let role = msg.role;
+        if (!VALID_ROLES.includes(role)) {
+          role = role === 'model' ? 'assistant' : 'assistant';
+        }
+        return { ...msg, content: String(content), role };
       });
       // Ensure newValue is a string
       let userContent = newValue;
