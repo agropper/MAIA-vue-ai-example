@@ -89,21 +89,15 @@ const sendQuery = (
       return
     }
 
-    // Only add 'name' to new assistant messages appended to the chat
-    const prevLength = appState.chatHistory.length;
-    const newLength = data.length;
+    // Robust: Only add 'name' to assistant messages that do not already have it
     const aiLabel = (AIoptions || [
       { label: 'Personal Chat', value: '/.netlify/functions/personal-chat' },
       { label: 'Anthropic', value: '/.netlify/functions/anthropic-chat' },
       { label: 'Gemini', value: '/.netlify/functions/gemini-chat' },
       { label: 'DeepSeek R1', value: '/.netlify/functions/deepseek-r1-chat' }
     ]).find((opt: { label: string; value: string }) => opt.value === appState.selectedAI)?.label || 'AI';
-    appState.chatHistory = data.map((msg: any, idx: number) => {
-      if (
-        msg.role === 'assistant' &&
-        !msg.name &&
-        idx >= prevLength
-      ) {
+    appState.chatHistory = data.map((msg: any) => {
+      if (msg.role === 'assistant' && !msg.name) {
         return { ...msg, name: aiLabel };
       }
       return msg;
