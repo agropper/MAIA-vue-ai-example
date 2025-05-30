@@ -63,11 +63,40 @@ const handler = async (event) => {
       let { chatHistory, newValue, timeline } = JSON.parse(event.body)
       // Remove all system messages from chatHistory
       chatHistory = chatHistory.filter(msg => msg.role !== 'system');
-      // Ensure all message.content fields are strings
-      chatHistory = chatHistory.map(msg => ({
-        ...msg,
-        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
-      }));
+      // Ensure all message.content fields are plain strings
+      chatHistory = chatHistory.map(msg => {
+        let content = msg.content;
+        if (typeof content === 'string') {
+          // ok
+        } else if (Array.isArray(content)) {
+          content = content.map((part) => {
+            if (typeof part === 'string') return part;
+            if (typeof part === 'object' && part !== null && 'text' in part) return part.text;
+            return '';
+          }).join(' ');
+        } else if (typeof content === 'object' && content !== null && 'text' in content) {
+          content = content.text;
+        } else {
+          content = JSON.stringify(content);
+        }
+        return { ...msg, content: String(content) };
+      });
+      // Ensure newValue is a string
+      let userContent = newValue;
+      if (typeof userContent === 'string') {
+        // ok
+      } else if (Array.isArray(userContent)) {
+        userContent = userContent.map((part) => {
+          if (typeof part === 'string') return part;
+          if (typeof part === 'object' && part !== null && 'text' in part) return part.text;
+          return '';
+        }).join(' ');
+      } else if (typeof userContent === 'object' && userContent !== null && 'text' in userContent) {
+        userContent = userContent.text;
+      } else {
+        userContent = JSON.stringify(userContent);
+      }
+      userContent = String(userContent);
 
       // Debug: Log the timeline value before constructing the systemPrompt
       // console.log('Timeline summary:', timeline ? timeline.slice(0, 100) : 'undefined');
@@ -80,7 +109,7 @@ const handler = async (event) => {
       const newChatHistory = [
       // Removed   { role: 'system', content: systemPrompt }, so the Knowledge Base would be used instead. 
         ...chatHistory,
-        { role: 'user', content: typeof newValue === 'string' ? newValue : JSON.stringify(newValue) }
+        { role: 'user', content: userContent }
       ];
 
       // Build the real params for the API call
@@ -88,6 +117,9 @@ const handler = async (event) => {
         messages: newChatHistory,
         model: 'agent-05102025'
       };
+
+      // Log the final params for debugging
+      console.log('Final params for DigitalOcean GenAI:', JSON.stringify(params, null, 2));
 
       // Deep clone for logging
       const paramsForLog = JSON.parse(JSON.stringify(params));
