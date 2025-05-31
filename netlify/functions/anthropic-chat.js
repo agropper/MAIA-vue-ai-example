@@ -54,36 +54,27 @@ const handler = async (event) => {
     try {
       let { chatHistory, newValue } = JSON.parse(event.body)
 
-      // Step 1: Extract system messages and concatenate content
-      const { filteredMessages, systemContext, tempStorage } = extractSystemMessages(chatHistory)
-
-      filteredMessages.push({
-        role: 'user',
-        content: newValue
-      })
-
+      // Use the full incoming chatHistory, do NOT filter or reconstruct
+      const fullHistory = Array.isArray(chatHistory) ? [...chatHistory] : [];
+      // Append the new user message
+      fullHistory.push({ role: 'user', content: newValue });
+      // Prepare context for Anthropic (system prompt and user/assistant messages only)
+      const systemMessages = fullHistory.filter(m => m.role === 'system').map(m => m.content).join('\n');
+      const nonSystemMessages = fullHistory.filter(m => m.role !== 'system');
       let params = {
-        messages: filteredMessages,
+        messages: nonSystemMessages,
         max_tokens: TOKEN_LIMIT,
         model: 'claude-3-7-sonnet-20250219',
-        system: systemContext // Insert concatenated system content here
-      }
-
-      const response = await anthropic.messages.create(params)
-
-      filteredMessages.push({
-        role: 'assistant',
-        content: response.content[0].text,
-        name: 'Claude'
-      })
-
-      // Step 2: Restore the system messages back to their original positions
-      const updatedChatHistory = restoreSystemMessages(filteredMessages, tempStorage)
-
+        system: systemMessages
+      };
+      const response = await anthropic.messages.create(params);
+      // Append the new assistant message with name: 'Claude'
+      fullHistory.push({ role: 'assistant', content: response.content[0].text, name: 'Claude' });
+      // Return the full updated chat history
       return {
         statusCode: 200,
-        body: JSON.stringify(updatedChatHistory)
-      }
+        body: JSON.stringify(fullHistory)
+      };
     } catch (error) {
       // Log error details
       console.error('Error processing request:', error)
