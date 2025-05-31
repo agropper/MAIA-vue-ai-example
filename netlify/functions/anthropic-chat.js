@@ -52,28 +52,37 @@ const handler = async (event) => {
     return response
   } else {
     try {
-      let { chatHistory, newValue } = JSON.parse(event.body)
+      // Parse incoming body
+      const body = JSON.parse(event.body)
+      const fullChatHistory = body.chatHistory || []
+      const newUserMessage = {
+        role: 'user',
+        content: body.newValue || ''
+      }
+      // Append the new user message to the full chat history
+      const updatedChatHistory = [...fullChatHistory, newUserMessage]
 
-      // Use the full incoming chatHistory, do NOT filter or reconstruct
-      const fullHistory = Array.isArray(chatHistory) ? [...chatHistory] : [];
-      // Append the new user message
-      fullHistory.push({ role: 'user', content: newValue });
+      // Filter for Anthropic: only user/assistant roles, only required fields
+      const anthropicMessages = updatedChatHistory
+        .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+        .map(msg => ({ role: msg.role, content: msg.content }))
+
       // Prepare context for Anthropic (system prompt and user/assistant messages only)
-      const systemMessages = fullHistory.filter(m => m.role === 'system').map(m => m.content).join('\n');
-      const nonSystemMessages = fullHistory.filter(m => m.role !== 'system');
+      const systemMessages = updatedChatHistory.filter(m => m.role === 'system').map(m => m.content).join('\n');
+      const nonSystemMessages = updatedChatHistory.filter(m => m.role !== 'system');
       let params = {
-        messages: nonSystemMessages,
+        messages: anthropicMessages,
         max_tokens: TOKEN_LIMIT,
         model: 'claude-3-7-sonnet-20250219',
         system: systemMessages
       };
       const response = await anthropic.messages.create(params);
       // Append the new assistant message with name: 'Claude'
-      fullHistory.push({ role: 'assistant', content: response.content[0].text, name: 'Claude' });
+      updatedChatHistory.push({ role: 'assistant', content: response.content[0].text, name: 'Claude' });
       // Return the full updated chat history
       return {
         statusCode: 200,
-        body: JSON.stringify(fullHistory)
+        body: JSON.stringify(updatedChatHistory)
       };
     } catch (error) {
       // Log error details
