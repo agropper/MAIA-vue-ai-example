@@ -25,7 +25,7 @@ let personalChatClient, anthropic, openai, deepseek;
 // DigitalOcean GenAI setup (Personal Chat)
 if (process.env.DIGITALOCEAN_PERSONAL_API_KEY) {
   personalChatClient = new OpenAI({
-    baseURL: 'https://ppezsbr6shhcaf2njlxk25bc.agents.do-ai.run/api/v1',
+    baseURL: process.env.DIGITALOCEAN_GENAI_ENDPOINT || 'https://vzfujeetn2dkj4d5awhvvibo.agents.do-ai.run/api/v1',
     apiKey: process.env.DIGITALOCEAN_PERSONAL_API_KEY
   });
 }
