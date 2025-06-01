@@ -1,6 +1,7 @@
 import type { AppState, TimelineChunk } from '../types'
 import { onMounted, onUnmounted, reactive, watch } from 'vue'
 import OpenAI from 'openai'
+import { API_BASE_URL } from '../utils/apiBase'
 
 const useChatState = () => {
   const localStorageKey = 'noshuri'
@@ -76,7 +77,7 @@ const useChatState = () => {
     access: access,
     currentQuery: '',
     currentFile: null,
-    selectedAI: selectedAIFromStorage || '/.netlify/functions/personal-chat',
+    selectedAI: selectedAIFromStorage || `${API_BASE_URL}/personal-chat`,
     timeline: '',
     timelineChunks: [],
     selectedEpoch: 1,
