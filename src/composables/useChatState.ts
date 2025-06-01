@@ -53,6 +53,19 @@ const useChatState = () => {
       ? sessionStorage.getItem(selectedAILocalStorageKey)
       : null
 
+  // Clean up invalid/old selectedAI values (old Netlify functions or wrong endpoints)
+  let cleanSelectedAI = selectedAIFromStorage;
+  if (cleanSelectedAI) {
+    // If it's an old Netlify function path or wrong endpoint, clear it
+    if (cleanSelectedAI.includes('/.netlify/functions/') || 
+        cleanSelectedAI.includes('/api/openai-chat') ||
+        cleanSelectedAI.includes('/api/open-ai-chat')) {
+      console.log('Clearing old/invalid selectedAI value:', cleanSelectedAI);
+      sessionStorage.removeItem(selectedAILocalStorageKey);
+      cleanSelectedAI = null;
+    }
+  }
+
   const appState: AppState = reactive({
     chatHistory: [],
     editBox: [],
@@ -77,7 +90,7 @@ const useChatState = () => {
     access: access,
     currentQuery: '',
     currentFile: null,
-    selectedAI: selectedAIFromStorage || `${API_BASE_URL}/personal-chat`,
+    selectedAI: cleanSelectedAI || `${API_BASE_URL}/personal-chat`,
     timeline: '',
     timelineChunks: [],
     selectedEpoch: 1,
