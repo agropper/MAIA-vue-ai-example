@@ -15,9 +15,7 @@ import { API_BASE_URL } from '../utils/apiBase'
 const AIoptions = [
   { label: 'Personal Chat', value: `${API_BASE_URL}/personal-chat` },
   { label: 'Anthropic', value: `${API_BASE_URL}/anthropic-chat` },
-  { label: 'ChatGPT', value: `${API_BASE_URL}/openai-chat` },
   { label: 'Gemini', value: `${API_BASE_URL}/gemini-chat` },
-  { label: 'DeepSeek', value: `${API_BASE_URL}/deepseek-chat` },
   { label: 'DeepSeek R1', value: `${API_BASE_URL}/deepseek-r1-chat` }
 ]
 
