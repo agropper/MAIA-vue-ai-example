@@ -1,0 +1,33 @@
+name: maia-vue-ai-example
+services:
+- name: web
+  environment_slug: node-js
+  github:
+    repo: YOUR_GITHUB_USERNAME/MAIA-vue-ai-example
+    branch: main
+  run_command: npm start
+  environment:
+  - key: NODE_ENV
+    value: production
+  - key: PORT
+    value: "8080"
+  - key: VITE_API_BASE_URL
+    value: ${APP_URL}/api
+  - key: DIGITALOCEAN_PERSONAL_API_KEY
+    type: SECRET
+  - key: DIGITALOCEAN_GENAI_API_KEY  
+    type: SECRET
+  - key: ANTHROPIC_API_KEY
+    type: SECRET
+  - key: OPENAI_API_KEY
+    type: SECRET
+  - key: DEEPSEEK_API_KEY
+    type: SECRET
+  - key: GEMINI_API_KEY
+    type: SECRET
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  routes:
+  - path: /
+  build_command: npm run build 
