@@ -259,7 +259,8 @@ app.post('/api/gemini-chat', async (req, res) => {
         parts: [{ text: msg.content }]
       }))
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+    console.log('Sending request to Gemini API...');
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -269,8 +270,29 @@ app.post('/api/gemini-chat', async (req, res) => {
       })
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error response:', response.status, errorText);
+      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+    }
+
     const data = await response.json();
+    console.log('Gemini API response:', JSON.stringify(data, null, 2));
+
+    // Better error handling for response structure
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('No candidates in Gemini response');
+    }
+
+    if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
+      throw new Error('Invalid content structure in Gemini response');
+    }
+
     const content = data.candidates[0].content.parts[0].text;
+    
+    if (!content) {
+      throw new Error('No text content in Gemini response');
+    }
     
     updatedChatHistory.push({ role: 'assistant', content, name: 'Gemini' });
     res.json(updatedChatHistory);
