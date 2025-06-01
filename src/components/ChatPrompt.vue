@@ -15,12 +15,10 @@ import { API_BASE_URL } from '../utils/apiBase'
 const AIoptions = [
   { label: 'Personal Chat', value: `${API_BASE_URL}/personal-chat` },
   { label: 'Anthropic', value: `${API_BASE_URL}/anthropic-chat` },
-  // { label: 'Chat GPT', value: 'http://localhost:3001/api/open-ai-chat' },
+  { label: 'ChatGPT', value: `${API_BASE_URL}/openai-chat` },
   { label: 'Gemini', value: `${API_BASE_URL}/gemini-chat` },
-  // { label: 'Mistral', value: 'http://localhost:3001/api/mistral-chat' },
-  // { label: 'DeepSeek', value: `${API_BASE_URL}/deepseek-chat` },
-  { label: 'DeepSeek R1', value: `${API_BASE_URL}/deepseek-r1-chat` },
-  //{ label: 'DigitalOcean GenAI', value: `${API_BASE_URL}/digitalocean-genai-chat` }
+  { label: 'DeepSeek', value: `${API_BASE_URL}/deepseek-chat` },
+  { label: 'DeepSeek R1', value: `${API_BASE_URL}/deepseek-r1-chat` }
 ]
 
 export default defineComponent({
