@@ -68,16 +68,20 @@ app.post('/api/personal-chat', async (req, res) => {
     }
 
     let { chatHistory, newValue, timeline } = req.body
+    
+    // Filter out any existing system messages since the GenAI agent has its own system prompt
     chatHistory = chatHistory.filter(msg => msg.role !== 'system');
 
-    let systemPrompt = 'You are a helpful assistant. Please reply in English.';
-    if (timeline) {
-      systemPrompt = `Timeline context:\n\n${timeline}\n\n${systemPrompt}`;
+    // If there's timeline context, include it in the user's message
+    let userMessage = newValue;
+    if (timeline && chatHistory.length === 0) {
+      // Only add timeline context to the first message to provide context
+      userMessage = `Timeline context: ${timeline}\n\nUser query: ${newValue}`;
     }
+
     const newChatHistory = [
-      { role: 'system', content: systemPrompt },
       ...chatHistory,
-      { role: 'user', content: newValue }
+      { role: 'user', content: userMessage }
     ];
 
     const params = {
