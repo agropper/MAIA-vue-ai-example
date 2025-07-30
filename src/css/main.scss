@@ -26,36 +26,92 @@
   background-color: white;
   .inner {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
+    gap: 0.5em;
     padding: 1em 0;
+    width: 90%;
+    max-width: 800px;
+    margin: 0 auto;
   }
-  .q-input {
-    order: 1;
-  }
-  .q-select {
-    margin-right: 0.5em;
-    .q-item {
-      padding: 0;
+  
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    width: 100%;
+    
+    .ai-select {
+      min-width: 150px;
+      flex-shrink: 0;
+    }
+    
+    .text-input {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .send-btn {
+      flex-shrink: 0;
     }
   }
-  button {
-    margin: 1em 0 0 0.5em;
-    order: 2;
-    height: 54px;
+  
+  .action-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    width: 100%;
+    flex-wrap: wrap;
+    
+    .epoch-select {
+      min-width: 200px;
+      flex-shrink: 0;
+    }
+    
+    .file-btn, .load-btn {
+      flex-shrink: 0;
+    }
   }
-  button.blue {
-    background-color: #1976d2;
-    color: white;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    flex: 1;
-    padding: 5px 16px;
-    height: 55px;
-    i {
-      display: none;
+  
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .inner {
+      width: 95%;
+      padding: 0.5em 0;
+    }
+    
+    .input-row {
+      flex-direction: column;
+      gap: 0.25em;
+      
+      .ai-select, .text-input, .send-btn {
+        width: 100%;
+      }
+    }
+    
+    .action-row {
+      justify-content: center;
+      gap: 0.25em;
+      
+      .epoch-select, .file-btn, .load-btn {
+        flex: 1;
+        min-width: auto;
+      }
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .inner {
+      width: 98%;
+      padding: 0.25em 0;
+    }
+    
+    .action-row {
+      flex-direction: column;
+      gap: 0.25em;
+      
+      .epoch-select, .file-btn, .load-btn {
+        width: 100%;
+      }
     }
   }
 }

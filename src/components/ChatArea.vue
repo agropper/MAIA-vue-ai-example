@@ -1,9 +1,25 @@
 <template>
-  <div class="chat-area" id="chat-area">
+  <div class="chat-area">
+    <!-- Agent Status Indicator -->
+    <AgentStatusIndicator
+      :agent="currentAgent"
+      :warning="warning"
+      @manage="$emit('manage-agent')"
+    />
+    
+    <!-- File Badges -->
+    <div v-if="appState.uploadedFiles.length > 0" class="file-badges">
+      <FileBadge
+        :files="appState.uploadedFiles"
+        @view-file="$emit('view-file', $event)"
+      />
+    </div>
+    
     <div v-for="(x, idx) in appState.chatHistory" :key="idx">
+      
       <!-- Normal Chat Message -->
       <q-chat-message
-        :name="('name' in x && typeof x.name === 'string' && x.name) ? x.name : getModelLabel(x, appState, AIoptions)"
+        :name="getModelLabel(x, appState, AIoptions)"
         v-if="x.role !== 'system' && !appState.editBox.includes(idx)"
         size="8"
         :sent="x.role === 'user'"
@@ -26,7 +42,7 @@
       <q-chat-message
         size="8"
         class="edit-chat"
-        :name="('name' in x && typeof x.name === 'string' && x.name) ? x.name : getModelLabel(x, appState, AIoptions)"
+        :name="getModelLabel(x, appState, AIoptions)"
         :sent="x.role === 'user'"
         v-if="appState.editBox.includes(idx)"
       >
@@ -67,8 +83,8 @@
       <q-btn
         size="sm"
         color="secondary"
-        label="End, Sign, & Save to Nosh"
-        @click="triggerSaveToNosh"
+        label="Save to CouchDB"
+        @click="triggerSaveToCouchDB"
       />
       <q-btn size="sm" color="warning" label="End without Saving" @click="closeNoSave" />
     </div>
@@ -81,7 +97,9 @@ import type { PropType } from 'vue'
 import { QBtn, QChatMessage, QCard, QCardSection, QCardActions } from 'quasar'
 import VueMarkdown from 'vue-markdown-render'
 import { getSystemMessageType } from '../utils'
-import type { AppState } from '../types'
+import type { AppState, UploadedFile } from '../types'
+import FileBadge from './FileBadge.vue'
+import AgentStatusIndicator from './AgentStatusIndicator.vue'
 
 export default defineComponent({
   name: 'ChatArea',
@@ -91,7 +109,9 @@ export default defineComponent({
     QCard,
     QCardSection,
     QCardActions,
-    VueMarkdown
+    VueMarkdown,
+    FileBadge,
+    AgentStatusIndicator
   },
   props: {
     appState: {
@@ -100,9 +120,28 @@ export default defineComponent({
     },
     AIoptions: {
       type: Array as PropType<{ label: string; value: string }[]>,
-      required: false
+      required: true
+    },
+    currentAgent: {
+      type: Object as PropType<any>,
+      default: null
+    },
+    warning: {
+      type: String,
+      default: ''
     }
   },
+  emits: [
+    'triggerSaveToCouchDB', 
+    'manage-agent',
+    'edit-message',
+    'save-message',
+    'view-system-message',
+    'view-file',
+    'save-to-file',
+    'trigger-save-to-couchdb',
+    'close-no-save'
+  ],
   methods: {
     editMessage(idx: number) {
       this.$emit('edit-message', idx)
@@ -118,11 +157,14 @@ export default defineComponent({
         this.$emit('view-system-message', '[Non-string content]')
       }
     },
+    viewFile(file: UploadedFile) {
+      this.$emit('view-file', file)
+    },
     saveToFile() {
       this.$emit('save-to-file')
     },
-    triggerSaveToNosh() {
-      this.$emit('trigger-save-to-nosh')
+    triggerSaveToCouchDB() {
+      this.$emit('trigger-save-to-couchdb')
     },
     closeNoSave() {
       this.$emit('close-no-save')
@@ -135,7 +177,11 @@ export default defineComponent({
     ): string {
       if (x.role === 'user') return 'User'
       if (x.role === 'assistant') {
-        // Try to find the label from AIoptions
+        // First, check if the message has a name field from the backend
+        if (x.name && typeof x.name === 'string') {
+          return x.name
+        }
+        // Fallback to AIoptions if no name field
         const aiOption = (AIoptions || (appState as any).AIoptions || []).find((opt: { value: string }) => opt.value === appState.selectedAI)
         return aiOption ? aiOption.label : 'Assistant'
       }

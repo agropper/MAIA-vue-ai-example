@@ -30,6 +30,15 @@ type AccessObject = {
   purpose: string
 }
 
+export interface UploadedFile {
+  id: string
+  name: string
+  size: number
+  type: 'transcript' | 'timeline' | 'pdf' | 'markdown' | 'text'
+  content: string
+  uploadedAt: Date
+}
+
 export interface AppState {
   chatHistory: ChatHistory
   editBox: number[]
@@ -56,6 +65,7 @@ export interface AppState {
   timelineChunks: TimelineChunk[]
   selectedEpoch: number
   hasChunkedTimeline: boolean
+  uploadedFiles: UploadedFile[]
 }
 export interface LogEntry {
   timestamp: number

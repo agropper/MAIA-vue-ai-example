@@ -56,7 +56,7 @@ export function useChatLogger() {
         ...metadata
       }
     })
-    console.log(systemEvents)
+    // console.log(systemEvents)
   }
 
   const getMessageContext = (messageIndex: number): TimelineChunk | null => {

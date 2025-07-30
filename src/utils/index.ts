@@ -383,6 +383,133 @@ const signatureContent = (username: string): string => {
   return `Signed by: ${username} Date: ${new Date().toDateString()}`
 }
 
+const parseTranscriptFromMarkdown = (markdownContent: string): ChatHistoryItem[] => {
+  const chatHistory: ChatHistoryItem[] = []
+  
+  // Split the content by sections
+  const sections = markdownContent.split(/(?=### )/g).filter(Boolean)
+  
+  for (const section of sections) {
+    if (section.includes('### Conversation')) {
+      // Extract conversation messages
+      const conversationLines = section.split('\n').filter(line => line.trim())
+      
+      let currentRole = ''
+      let currentContent = ''
+      
+      for (const line of conversationLines) {
+        if (line.startsWith('##### ')) {
+          // Save previous message if exists
+          if (currentRole && currentContent.trim()) {
+            chatHistory.push({
+              role: currentRole as 'user' | 'assistant' | 'system',
+              content: currentContent.trim()
+            })
+          }
+          
+          // Start new message
+          const roleMatch = line.match(/##### (user|assistant|system):/)
+          if (roleMatch) {
+            currentRole = roleMatch[1]
+            currentContent = ''
+          }
+        } else if (currentRole && line.trim()) {
+          // Add content to current message
+          currentContent += line + '\n'
+        }
+      }
+      
+      // Add the last message
+      if (currentRole && currentContent.trim()) {
+        chatHistory.push({
+          role: currentRole as 'user' | 'assistant' | 'system',
+          content: currentContent.trim()
+        })
+      }
+    }
+  }
+  
+  // If no messages were found in the conversation section, try a more flexible approach
+  if (chatHistory.length === 0) {
+    console.log('No messages found in conversation section, trying alternative parsing...')
+    
+    // Look for user and assistant messages anywhere in the content
+    const lines = markdownContent.split('\n')
+    let currentRole = ''
+    let currentContent = ''
+    
+    for (const line of lines) {
+      if (line.startsWith('##### user:')) {
+        // Save previous message if exists
+        if (currentRole && currentContent.trim()) {
+          chatHistory.push({
+            role: currentRole as 'user' | 'assistant' | 'system',
+            content: currentContent.trim()
+          })
+        }
+        
+        // Start new user message
+        currentRole = 'user'
+        currentContent = ''
+      } else if (line.startsWith('##### assistant:')) {
+        // Save previous message if exists
+        if (currentRole && currentContent.trim()) {
+          chatHistory.push({
+            role: currentRole as 'user' | 'assistant' | 'system',
+            content: currentContent.trim()
+          })
+        }
+        
+        // Start new assistant message
+        currentRole = 'assistant'
+        currentContent = ''
+      } else if (currentRole && line.trim() && !line.startsWith('###') && !line.startsWith('#####')) {
+        // Add content to current message (skip section headers)
+        currentContent += line + '\n'
+      }
+    }
+    
+    // Add the last message
+    if (currentRole && currentContent.trim()) {
+      chatHistory.push({
+        role: currentRole as 'user' | 'assistant' | 'system',
+        content: currentContent.trim()
+      })
+    }
+  }
+  
+  console.log('Final parsed chat history:', chatHistory)
+  return chatHistory
+}
+
+const extractTextFromPDF = async (file: File): Promise<string> => {
+  // For now, return a placeholder since PDF parsing requires additional libraries
+  // In a full implementation, you would use a library like pdf-parse or pdfjs-dist
+  return `PDF content from ${file.name} (PDF parsing not yet implemented)`
+}
+
+const detectFileType = (fileName: string, content: string): 'transcript' | 'timeline' | 'pdf' | 'markdown' | 'text' => {
+  const extension = fileName.toLowerCase().split('.').pop()
+  
+  if (content.includes('### Conversation') && content.includes('##### user:') && content.includes('##### assistant:')) {
+    return 'transcript'
+  }
+  
+  if (extension === 'pdf') {
+    return 'pdf'
+  }
+  
+  if (extension === 'md' || extension === 'markdown') {
+    return 'markdown'
+  }
+  
+  if (extension === 'json') {
+    return 'timeline'
+  }
+  
+  return 'text'
+}
+
 export {
   createEpochOptions,
   getChunkDates,
@@ -399,5 +526,8 @@ export {
   validateFile,
   processTimeline,
   estimateTokenCount,
-  PAUSE_THRESHOLD
+  PAUSE_THRESHOLD,
+  parseTranscriptFromMarkdown,
+  extractTextFromPDF,
+  detectFileType
 }

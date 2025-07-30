@@ -1,0 +1,25 @@
+# Simplified Dockerfile for MAIA Vue AI Example (Local Testing)
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Build the frontend
+RUN npm run build
+
+# Expose port
+EXPOSE 3001
+
+# Set environment
+ENV NODE_ENV=development
+ENV PORT=3001
+ENV LOCAL_TESTING=true
+
+# Start the simplified server
+CMD ["node", "server-simple.js"] 

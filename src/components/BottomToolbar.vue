@@ -2,82 +2,103 @@
   <div class="bottom-toolbar">
     <div class="prompt">
       <div class="inner">
-        <q-select
-          v-if="appState.timelineChunks?.length"
-          outlined
-          dense
-          v-model="appState.selectedEpoch"
-          :options="epochOptions"
-          label="Select Timeline Epoch"
-        >
-          <template v-slot:option="scope">
-            <q-item v-bind="scope.itemProps">
-              <q-item-section>
-                <q-item-label>Epoch {{ scope.opt.value }}</q-item-label>
-                <q-item-label caption>
-                  {{ getChunkDates(scope.opt.value) }}
-                  ({{ getChunkTokenCount(scope.opt.value) }} tokens)
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </template>
-          <template v-slot:selected>
-            <q-item>
-              <q-item-section>
-                <q-item-label
-                  >Epoch {{ appState.selectedEpoch }}</q-item-label
-                >
-                <q-item-label caption>
-                  {{ getChunkDates(appState.selectedEpoch) }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </template>
-        </q-select>
-        <q-btn
-          @click="pickFiles"
-          flat
-          icon="attach_file"
-          v-if="appState.timelineChunks?.length === 0"
-        />
-        <q-input
-          outlined
-          :placeholder="placeholderText"
-          v-model="appState.currentQuery"
-          @keyup.enter="triggerSendQuery"
-        >
-          <template v-slot:append>
-            <q-btn
-              v-if="isSpeechSupported"
-              flat
-              dense
-              :icon="isListening ? 'mic' : 'mic_none'"
-              :color="isListening ? 'primary' : 'grey'"
-              @click="toggleSpeechRecognition"
-            />
-          </template>
-        </q-input>
-        <div class="action-buttons">
+        <!-- Main input row -->
+        <div class="input-row">
+          <!-- AI Model Dropdown -->
           <q-select
             outlined
             dense
             v-model="selectedModel"
             :options="AIoptions"
-            style="width: 150px"
-            class="q-mr-sm"
+            class="ai-select"
           />
-          <q-btn color="primary" label="Send" @click="triggerSendQuery" size="sm" />
+          
+          <!-- Text Input -->
+          <q-input
+            outlined
+            :placeholder="placeholderText"
+            v-model="appState.currentQuery"
+            @keyup.enter="triggerSendQuery"
+            class="text-input"
+          >
+            <template v-slot:append>
+              <q-btn
+                v-if="isSpeechSupported"
+                flat
+                dense
+                :icon="isListening ? 'mic' : 'mic_none'"
+                :color="isListening ? 'primary' : 'grey'"
+                @click="toggleSpeechRecognition"
+              />
+            </template>
+          </q-input>
+          
+          <!-- Send Button -->
+          <q-btn 
+            color="primary" 
+            label="Send" 
+            @click="triggerSendQuery" 
+            size="sm"
+            class="send-btn"
+          />
         </div>
-        <GNAP
-          v-if="!appState.isAuthorized"
-          name="MAIA"
-          helper="blue small"
-          @on-authorized="triggerAuth"
-          @jwt="triggerJWT"
-          :access="appState.access"
-          server="https://trustee.health/api/as"
-          label="Connect to NOSH"
-        />
+        
+        <!-- Secondary action row -->
+        <div class="action-row">
+          <!-- Timeline Epoch Selector (if available) -->
+          <q-select
+            v-if="appState.timelineChunks?.length"
+            outlined
+            dense
+            v-model="appState.selectedEpoch"
+            :options="epochOptions"
+            label="Select Timeline Epoch"
+            class="epoch-select"
+          >
+            <template v-slot:option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section>
+                  <q-item-label>Epoch {{ scope.opt.value }}</q-item-label>
+                  <q-item-label caption>
+                    {{ getChunkDates(scope.opt.value) }}
+                    ({{ getChunkTokenCount(scope.opt.value) }} tokens)
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+            <template v-slot:selected>
+              <q-item>
+                <q-item-section>
+                  <q-item-label
+                    >Epoch {{ appState.selectedEpoch }}</q-item-label
+                  >
+                  <q-item-label caption>
+                    {{ getChunkDates(appState.selectedEpoch) }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+          
+          <!-- File Upload Button -->
+          <q-btn
+            @click="pickFiles"
+            flat
+            icon="attach_file"
+            v-if="appState.timelineChunks?.length === 0"
+            class="file-btn"
+          />
+          
+          <!-- Load Saved Chats Button -->
+          <q-btn
+            v-if="!appState.isAuthorized"
+            color="primary"
+            label="Load Saved Chats"
+            @click="triggerLoadSavedChats"
+            size="sm"
+            class="load-btn"
+          />
+        </div>
       </div>
     </div>
 
@@ -138,6 +159,14 @@ export default defineComponent({
     },
     triggerJWT: {
       type: Function as PropType<(...args: any[]) => any>,
+      required: true
+    },
+    triggerLoadSavedChats: {
+      type: Function as PropType<() => void>,
+      required: true
+    },
+    triggerAgentManagement: {
+      type: Function as PropType<() => void>,
       required: true
     },
     placeholderText: {

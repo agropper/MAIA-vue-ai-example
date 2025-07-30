@@ -1,6 +1,5 @@
-import { convertJSONtoMarkdown, processTimeline, validateFile, estimateTokenCount } from '../utils'
-
-import type { AppState } from '../types'
+import type { AppState, ValidationResult, UploadedFile } from '../types'
+import { convertJSONtoMarkdown, processTimeline, validateFile, estimateTokenCount, parseTranscriptFromMarkdown, extractTextFromPDF, detectFileType } from '../utils'
 import { useTranscript } from '../composables/useTranscript'
 
 const showAuth = (appState: AppState, writeMessage: (message: string, type: string) => void) => {
@@ -136,61 +135,222 @@ const showJWT = async (
   }
 }
 
-const uploadFile = async (
+const uploadTranscriptFile = async (
   file: File,
   appState: AppState,
   writeMessage: (message: string, type: string) => void
 ) => {
-  const validation = await validateFile(file, writeMessage)
-
-  if (!validation.isValid || !validation.processedContent) {
-    writeMessage(validation.error || 'Invalid file', 'error')
-    return
-  }
-
   appState.isLoading = true
   try {
-    if (Array.isArray(validation.processedContent)) {
-      // Simply set the chunks and current content in memory
-      appState.timelineChunks = validation.processedContent
-      appState.hasChunkedTimeline = true
-
-      const firstChunk = validation.processedContent[0]
-      appState.timeline = firstChunk.content
-
-      const bytes = new TextEncoder().encode(firstChunk.content).length
-      const tokens = estimateTokenCount(firstChunk.content)
-      // Set the single system message with the current chunk
-      appState.chatHistory = [
-        {
-          role: 'system',
-          content: `Timeline context (${firstChunk.dateRange.start} to ${firstChunk.dateRange.end}) [${bytes} bytes, ~${tokens} tokens]:\n\n${firstChunk.content}`
-        }
-      ]
-    } else {
-      appState.timeline = validation.processedContent
-      appState.hasChunkedTimeline = false
-      appState.timelineChunks = []
-
-      const bytes = new TextEncoder().encode(validation.processedContent).length
-      const tokens = estimateTokenCount(validation.processedContent)
-      appState.chatHistory = [
-        {
-          role: 'system',
-          content: `Timeline context: [${bytes} bytes, ~${tokens} tokens]\n\n${validation.processedContent}`
-        }
-      ]
+    const content = await file.text()
+    
+    // Parse the transcript content to validate it's a proper transcript
+    const chatHistory = parseTranscriptFromMarkdown(content)
+    
+    if (chatHistory.length === 0) {
+      writeMessage('No conversation found in transcript file', 'error')
+      return
     }
-
-    writeMessage('Timeline processed successfully', 'success')
+    
+    // Add to uploaded files for badge display
+    const uploadedFile: UploadedFile = {
+      id: `file-${Date.now()}-${Math.random()}`,
+      name: file.name,
+      size: file.size,
+      type: 'transcript',
+      content: content,
+      uploadedAt: new Date()
+    }
+    appState.uploadedFiles.push(uploadedFile)
+    
+    // Don't add to chat history - just make available as context
+    writeMessage(`Transcript loaded successfully with ${chatHistory.length} messages`, 'success')
   } catch (error) {
     let errorMessage = 'Unknown error'
     if (error instanceof Error) {
       errorMessage = error.message
     }
+    console.error('Error loading transcript:', error)
     writeMessage(`Error: ${errorMessage}`, 'error')
   } finally {
     appState.isLoading = false
+  }
+}
+
+const uploadPDFFile = async (
+  file: File,
+  appState: AppState,
+  writeMessage: (message: string, type: string) => void
+) => {
+  appState.isLoading = true
+  try {
+    // Check file size (limit to 50MB to prevent memory issues)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      throw new Error(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 50MB.`)
+    }
+
+    // Use FormData for more efficient file upload
+    const formData = new FormData()
+    formData.append('pdfFile', file)
+    
+    // Send to server for PDF parsing
+    const response = await fetch('/api/parse-pdf', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to parse PDF')
+    }
+
+    const result = await response.json()
+    
+    const uploadedFile: UploadedFile = {
+      id: `file-${Date.now()}-${Math.random()}`,
+      name: file.name,
+      size: file.size,
+      type: 'pdf',
+      content: result.markdown,
+      uploadedAt: new Date()
+    }
+    appState.uploadedFiles.push(uploadedFile)
+    // Don't add to chat history - just make available as context
+    writeMessage(`PDF file loaded successfully (${result.pages} pages, ${result.characters} characters)`, 'success')
+  } catch (error) {
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    console.error('Error loading PDF:', error)
+    writeMessage(`Error: ${errorMessage}`, 'error')
+  } finally {
+    appState.isLoading = false
+  }
+}
+
+const uploadMarkdownFile = async (
+  file: File,
+  appState: AppState,
+  writeMessage: (message: string, type: string) => void
+) => {
+  appState.isLoading = true
+  try {
+    const content = await file.text()
+    const uploadedFile: UploadedFile = {
+      id: `file-${Date.now()}-${Math.random()}`,
+      name: file.name,
+      size: file.size,
+      type: 'markdown',
+      content: content,
+      uploadedAt: new Date()
+    }
+    appState.uploadedFiles.push(uploadedFile)
+    // Don't add to chat history - just make available as context
+    writeMessage('Markdown file loaded successfully', 'success')
+  } catch (error) {
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    console.error('Error loading markdown:', error)
+    writeMessage(`Error: ${errorMessage}`, 'error')
+  } finally {
+    appState.isLoading = false
+  }
+}
+
+const uploadTimelineFile = async (
+  file: File,
+  appState: AppState,
+  writeMessage: (message: string, type: string) => void
+) => {
+  appState.isLoading = true
+  try {
+    const content = await file.text()
+    const uploadedFile: UploadedFile = {
+      id: `file-${Date.now()}-${Math.random()}`,
+      name: file.name,
+      size: file.size,
+      type: 'timeline',
+      content: content,
+      uploadedAt: new Date()
+    }
+    appState.uploadedFiles.push(uploadedFile)
+    // Don't add to chat history - just make available as context
+    writeMessage('Timeline file loaded successfully', 'success')
+  } catch (error) {
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    console.error('Error loading timeline:', error)
+    writeMessage(`Error: ${errorMessage}`, 'error')
+  } finally {
+    appState.isLoading = false
+  }
+}
+
+const uploadTextFile = async (
+  file: File,
+  appState: AppState,
+  writeMessage: (message: string, type: string) => void
+) => {
+  appState.isLoading = true
+  try {
+    const content = await file.text()
+    const uploadedFile: UploadedFile = {
+      id: `file-${Date.now()}-${Math.random()}`,
+      name: file.name,
+      size: file.size,
+      type: 'text',
+      content: content,
+      uploadedAt: new Date()
+    }
+    appState.uploadedFiles.push(uploadedFile)
+    // Don't add to chat history - just make available as context
+    writeMessage('Text file loaded successfully', 'success')
+  } catch (error) {
+    let errorMessage = 'Unknown error'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    console.error('Error loading text file:', error)
+    writeMessage(`Error: ${errorMessage}`, 'error')
+  } finally {
+    appState.isLoading = false
+  }
+}
+
+export const uploadFile = async (
+  file: File,
+  appState: AppState,
+  writeMessage: (message: string, type: string) => void
+) => {
+  const content = await file.text()
+  const fileType = detectFileType(file.name, content)
+  
+  console.log(`📁 File upload: ${file.name} (${fileType}) - ${Math.round(file.size / 1024)}KB`)
+  
+  switch (fileType) {
+    case 'transcript':
+      await uploadTranscriptFile(file, appState, writeMessage)
+      break
+    case 'pdf':
+      await uploadPDFFile(file, appState, writeMessage)
+      break
+    case 'markdown':
+      await uploadMarkdownFile(file, appState, writeMessage)
+      break
+    case 'timeline':
+      await uploadTimelineFile(file, appState, writeMessage)
+      break
+    case 'text':
+      await uploadTextFile(file, appState, writeMessage)
+      break
+    default:
+      writeMessage('Unsupported file type', 'error')
   }
 }
 
@@ -234,4 +394,4 @@ const saveToNosh = async (
   }
 }
 
-export { showAuth, showJWT, saveToNosh, uploadFile }
+export { showAuth, showJWT, saveToNosh }

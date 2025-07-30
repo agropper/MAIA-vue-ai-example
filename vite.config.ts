@@ -16,7 +16,22 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html') // main page
-      }
+      },
+      external: [
+        'node-fetch',
+        'stream',
+        'util',
+        'buffer',
+        'events',
+        'url',
+        'http',
+        'https',
+        'zlib',
+        'fs',
+        'path',
+        'crypto',
+        'querystring'
+      ]
     }
   },
   publicDir: 'public'

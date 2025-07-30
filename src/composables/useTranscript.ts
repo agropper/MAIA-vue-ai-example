@@ -3,7 +3,7 @@ import type { AppState, ChatHistory, TimelineChunk } from '../types'
 import { useChatLogger } from './useChatLogger'
 
 interface TranscriptSection {
-  type: 'conversation' | 'context' | 'timeline' | 'audit' | 'session' | 'signature'
+  type: 'conversation' | 'context' | 'timeline' | 'audit' | 'session' | 'signature' | 'uploadedFiles'
   content: string
 }
 
@@ -42,7 +42,7 @@ export function useTranscript() {
             contextSwitch && msg.role !== 'system' && contextSwitch.metadata.activeChunkIndex !== undefined
               ? ` [Context: Epoch ${contextSwitch.metadata.activeChunkIndex + 1}]`
               : ''
-          console.log(msg)
+          // console.log(msg)
           return msg.role !== 'system'
             ? `##### ${msg.role}${contextInfo}:\n${msg.content}`
             : `##### ${msg.role}${contextInfo}:\n${typeof msg.content === 'string' ? msg.content.split('\n')[0] : ''}`
@@ -85,6 +85,22 @@ export function useTranscript() {
     return `### Signature\n\nSigned by: ${username}\nDate: ${new Date().toDateString()}`
   }
 
+  const generateUploadedFiles = (uploadedFiles: any[]): string => {
+    if (!uploadedFiles || uploadedFiles.length === 0) {
+      return ''
+    }
+
+    return (
+      `### Uploaded Files (Context)\n\n` +
+      uploadedFiles
+        .map((file) => {
+          const fileSize = file.size ? ` (${(file.size / 1024).toFixed(1)}KB)` : ''
+          return `- **${file.name}**${fileSize} - ${file.type}`
+        })
+        .join('\n')
+    )
+  }
+
   const generateTranscript = (appState: AppState, includeSystem: boolean = false): string => {
     logSystemEvent(
       'Generating transcript',
@@ -100,6 +116,10 @@ export function useTranscript() {
       {
         type: 'session',
         content: generateSessionInfo(appState)
+      },
+      {
+        type: 'uploadedFiles',
+        content: generateUploadedFiles(appState.uploadedFiles)
       },
       {
         type: 'conversation',
@@ -131,6 +151,7 @@ export function useTranscript() {
 
   return {
     generateTranscript,
-    generateTimeline
+    generateTimeline,
+    generateUploadedFiles
   }
 }

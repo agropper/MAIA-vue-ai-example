@@ -8,9 +8,13 @@ import { useTranscript } from '../composables/useTranscript'
 import ChatArea from './ChatArea.vue'
 import BottomToolbar from './BottomToolbar.vue'
 import { showAuth, showJWT, saveToNosh, uploadFile } from '../composables/useAuthHandling'
+import type { UploadedFile } from '../types'
 import { sendQuery } from '../composables/useQuery'
 import PopUp from './PopUp.vue'
+import SavedChatsDialog from './SavedChatsDialog.vue'
+import { useCouchDB, type SavedChat } from '../composables/useCouchDB'
 import { API_BASE_URL } from '../utils/apiBase'
+import AgentManagementDialog from './AgentManagementDialog.vue'
 
 const AIoptions = [
   { label: 'Personal Chat', value: `${API_BASE_URL}/personal-chat` },
@@ -27,7 +31,9 @@ export default defineComponent({
     QIcon,
     PopUp,
     ChatArea,
-    QBtnToggle
+    QBtnToggle,
+    SavedChatsDialog,
+    AgentManagementDialog
   },
   computed: {
     placeholderText() {
@@ -50,13 +56,84 @@ export default defineComponent({
     const { appState, writeMessage, clearLocalStorageKeys } = useChatState()
     const { logMessage, logContextSwitch, logSystemEvent, setTimelineChunks } = useChatLogger()
     const { generateTranscript } = useTranscript()
+    const { saveChat } = useCouchDB()
     const localStorageKey = 'noshuri'
     const popupRef = ref<InstanceType<typeof PopUp> | null>(null)
+    const showSavedChatsDialog = ref(false)
+    const showAgentManagementDialog = ref(false)
+    const currentAgent = ref<any>(null)
+    const agentWarning = ref<string>('')
+
+    // Fetch current agent information on component mount
+    const fetchCurrentAgent = async () => {
+      try {
+        const response = await fetch('/api/current-agent');
+        const data = await response.json();
+        
+        if (data.agent) {
+          currentAgent.value = data.agent;
+          console.log(`🤖 Current agent loaded: ${data.agent.name}`);
+          
+          if (data.agent.knowledgeBase) {
+            console.log(`📚 Current KB: ${data.agent.knowledgeBase.name}`);
+          } else {
+            console.log(`📚 No KB assigned`);
+          }
+          
+          // Handle warnings from the API
+          if (data.warning) {
+            console.warn(data.warning);
+            agentWarning.value = data.warning;
+          } else {
+            agentWarning.value = '';
+          }
+        } else {
+          currentAgent.value = null;
+          console.log('🤖 No agent configured');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching current agent:', error);
+        currentAgent.value = null;
+      }
+    };
+
+    // Call fetchCurrentAgent when component mounts
+    fetchCurrentAgent()
+
+    // Method to refresh agent data (called from AgentManagementDialog)
+    const refreshAgentData = async () => {
+      await fetchCurrentAgent();
+    };
 
     const showPopup = () => {
       if (popupRef.value && popupRef.value.openPopup) {
         popupRef.value.openPopup()
       }
+    }
+
+    const triggerAgentManagement = () => {
+      showAgentManagementDialog.value = true
+    }
+
+    const handleAgentUpdated = (agentInfo: any) => {
+      if (agentInfo) {
+        // Update the current agent with the new information
+        currentAgent.value = agentInfo
+        console.log('🤖 Agent updated:', agentInfo.name)
+        
+        // Update the AI options to use the new agent endpoint if available
+        const personalChatOption = AIoptions.find(option => option.label === 'Personal Chat')
+        if (personalChatOption && agentInfo.endpoint) {
+          personalChatOption.value = agentInfo.endpoint
+        }
+      } else {
+        currentAgent.value = null
+        console.log('🤖 Agent cleared')
+      }
+    }
+
+    const handleManageAgent = () => {
+      showAgentManagementDialog.value = true
     }
 
     const editMessage = (idx: number) => {
@@ -79,6 +156,37 @@ export default defineComponent({
       logSystemEvent('Saved to NOSH', {}, appState)
     }
 
+    const triggerSaveToCouchDB = async () => {
+      console.log('🔍 triggerSaveToCouchDB called')
+      console.log('🔍 chatHistory length:', appState.chatHistory.length)
+      console.log('🔍 uploadedFiles length:', appState.uploadedFiles.length)
+      
+      try {
+        console.log('🔍 Calling saveChat...')
+        const result = await saveChat(appState.chatHistory, appState.uploadedFiles)
+        console.log('🔍 saveChat result:', result)
+        writeMessage(result.message, 'success')
+        logSystemEvent('Saved to CouchDB', { chatId: result.chatId }, appState)
+      } catch (error) {
+        console.error('🔍 Save to CouchDB error:', error)
+        writeMessage('Failed to save chat to CouchDB', 'error')
+        logSystemEvent('Save to CouchDB failed', { error: error instanceof Error ? error.message : 'Unknown error' }, appState)
+      }
+    }
+
+    const triggerLoadSavedChats = () => {
+      console.log('🔍 triggerLoadSavedChats called')
+      showSavedChatsDialog.value = true
+      logSystemEvent('Load saved chats dialog opened', {}, appState)
+    }
+
+    const handleChatSelected = (chat: SavedChat) => {
+      appState.chatHistory = chat.chatHistory
+      appState.uploadedFiles = chat.uploadedFiles
+      writeMessage(`Loaded chat from ${new Date(chat.createdAt).toLocaleDateString()}`, 'success')
+      logSystemEvent('Chat loaded from CouchDB', { chatId: chat.id }, appState)
+    }
+
     const triggerSendQuery = async () => {
       // If Personal Chat is selected and chatHistory is empty, only use the default if the input is empty or matches the default
       const personalChatValue = AIoptions.find((option) => option.label === 'Personal Chat')?.value;
@@ -93,7 +201,19 @@ export default defineComponent({
         }
         // Otherwise, use what the user typed (do nothing)
       }
-      await sendQuery(appState, writeMessage, appState.selectedAI, AIoptions)
+      
+      try {
+        appState.isLoading = true
+        const newChatHistory = await sendQuery(appState.selectedAI, appState.chatHistory, appState)
+        appState.chatHistory = newChatHistory
+        appState.currentQuery = ''
+        appState.isLoading = false
+      } catch (error) {
+        console.error('Query failed:', error)
+        writeMessage('Failed to send query', 'error')
+        appState.isLoading = false
+      }
+      
       logMessage({
         role: 'user',
         content: `Sent query to ${appState.selectedAI}`
@@ -151,6 +271,16 @@ export default defineComponent({
       logSystemEvent('Session closed', {}, appState)
     }
 
+    const viewFile = (file: UploadedFile) => {
+      appState.popupContent = file.content
+      appState.popupContentFunction = () => {
+        appState.popupContent = ''
+        appState.popupContentFunction = () => {}
+      }
+      showPopup()
+      logSystemEvent('File viewed', { fileName: file.name }, appState)
+    }
+
     // Call this to initialize timeline chunks, assuming you have them in `appState.timelineChunks`
     setTimelineChunks(appState.timelineChunks, appState)
 
@@ -164,6 +294,7 @@ export default defineComponent({
       triggerAuth,
       triggerJWT,
       triggerSaveToNosh,
+      triggerSaveToCouchDB,
       triggerSendQuery,
       triggerUploadFile,
       handleFileUpload,
@@ -174,7 +305,18 @@ export default defineComponent({
       clearLocalStorageKeys,
       getSystemMessageType,
       pickFiles,
-      AIoptions
+      viewFile,
+      triggerLoadSavedChats,
+      handleChatSelected,
+      showSavedChatsDialog,
+      AIoptions,
+      triggerAgentManagement,
+      handleAgentUpdated,
+      showAgentManagementDialog,
+      currentAgent,
+      agentWarning,
+      handleManageAgent,
+      refreshAgentData
     }
   }
 })
@@ -218,10 +360,14 @@ export default defineComponent({
         showPopup()
       }
     "
+    @view-file="viewFile"
     @save-to-file="saveToFile"
-    @trigger-save-to-nosh="triggerSaveToNosh"
+    @trigger-save-to-couchdb="triggerSaveToCouchDB"
     @close-no-save="closeNoSave"
     @get-system-message-type="getSystemMessageType"
+    :currentAgent="currentAgent"
+    :warning="agentWarning"
+    @manage-agent="handleManageAgent"
   />
 
   <!-- Bottom Toolbar -->
@@ -231,9 +377,11 @@ export default defineComponent({
     :triggerSendQuery="triggerSendQuery"
     :triggerAuth="triggerAuth"
     :triggerJWT="triggerJWT"
+    :triggerLoadSavedChats="triggerLoadSavedChats"
     :placeholderText="placeholderText"
     :clearLocalStorageKeys="clearLocalStorageKeys"
     :AIoptions="AIoptions"
+    :triggerAgentManagement="triggerAgentManagement"
   />
 
   <!-- Popup for displaying system messages -->
@@ -243,5 +391,21 @@ export default defineComponent({
     :content="appState.popupContent"
     button-text="Close"
     :on-close="() => appState.popupContentFunction()"
+  />
+
+  <!-- Saved Chats Dialog -->
+  <SavedChatsDialog
+    v-model="showSavedChatsDialog"
+    :patientId="'demo_patient_001'"
+    @chat-selected="handleChatSelected"
+  />
+
+  <!-- Agent Management Dialog -->
+  <AgentManagementDialog
+    v-model="showAgentManagementDialog"
+    :AIoptions="AIoptions"
+    :uploadedFiles="appState.uploadedFiles"
+    @agent-updated="handleAgentUpdated"
+    @refresh-agent-data="refreshAgentData"
   />
 </template>

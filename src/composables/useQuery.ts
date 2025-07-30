@@ -1,6 +1,5 @@
-import { estimateTokenCount, postData } from '../utils'
-
-import type { AppState } from '../types'
+import { estimateTokenCount } from '../utils'
+import type { AppState, ChatHistoryItem } from '../types'
 
 const getTimelineStats = (timeline: string) => {
   const bytes = new TextEncoder().encode(timeline).length
@@ -8,104 +7,105 @@ const getTimelineStats = (timeline: string) => {
   return `Timeline context: [${bytes} bytes, ~${tokens} tokens]`
 }
 
-const sendQuery = (
-  appState: AppState,
-  writeMessage: (message: string, type: string) => void,
+export const postData = async (uri: string, data: any): Promise<any> => {
+  try {
+    const response = await fetch(uri, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('API request failed:', error);
+    throw error;
+  }
+};
+
+export const sendQuery = async (
   uri: string,
-  AIoptions: { label: string; value: string }[]
-) => {
-  // Calculate just chat history and new query tokens
-  const chatHistoryTokens = appState.chatHistory.reduce((total, msg) => {
-    return total + estimateTokenCount(typeof msg.content === 'string' ? msg.content : '')
-  }, 0)
-  const newQueryTokens = estimateTokenCount(appState.currentQuery || '')
+  chatHistory: ChatHistoryItem[],
+  appState: AppState
+): Promise<ChatHistoryItem[]> => {
+  const startTime = Date.now()
+  
+  try {
+    const chatHistoryToSend = chatHistory.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+      ...(msg as any).name && { name: (msg as any).name }
+    }));
 
-  const totalTokens = chatHistoryTokens + newQueryTokens
-
-  console.log('Token breakdown:', {
-    chatHistory: chatHistoryTokens,
-    newQuery: newQueryTokens,
-    total: totalTokens
-  })
-
-  // Debug: Log chat history before sending
-  // console.log('Chat history before sending:', JSON.stringify(appState.chatHistory, null, 2))
-
-  appState.isLoading = true
-
-  // Only push active question if there is a current query
-  if (appState.currentQuery) {
-    appState.activeQuestion = {
-      role: 'user',
-      content: appState.currentQuery || ''
+    // Calculate context size and tokens for frontend logging
+    let contextSize = 0
+    let totalTokens = 0
+    
+    // Add timeline context
+    if (appState.timeline) {
+      const timelineBytes = new TextEncoder().encode(appState.timeline).length
+      const timelineTokens = estimateTokenCount(appState.timeline)
+      contextSize += timelineBytes
+      totalTokens += timelineTokens
     }
-  }
-
-  // If using Personal AI, sanitize chatHistory
-  let chatHistoryToSend = appState.chatHistory;
-  if (uri.endsWith('/personal-chat')) {
-    chatHistoryToSend = appState.chatHistory.map(msg => {
-      let content = msg.content;
-      if (typeof content === 'string') {
-        // ok
-      } else if (Array.isArray(content)) {
-        // Join all text parts (for Gemini, etc.)
-        content = content.map((part: any) => {
-          if (typeof part === 'string') return part;
-          if (typeof part === 'object' && part !== null && 'text' in part) return part.text;
-          return '';
-        }).join(' ');
-      } else if (typeof content === 'object' && content !== null && 'text' in content) {
-        content = (content as any).text;
-      } else {
-        content = JSON.stringify(content);
-      }
-      return { ...msg, content: String(content) };
-    });
-  }
-
-  postData(uri, {
-    chatHistory: chatHistoryToSend,
-    newValue: appState.currentQuery || '',
-    timeline: appState.timeline
-  }).then((data) => {
-    // Debug: Log response data
-    // console.log('Response data received:', JSON.stringify(data, null, 2))
-    if (!data || data.message) {
-      writeMessage(data ? data.message : 'Failed to get response from AI', 'error')
-      appState.isLoading = false
-      appState.activeQuestion = {
-        role: 'user',
-        content: ''
-      }
-      return
+    
+    // Add uploaded files context
+    if (appState.uploadedFiles && appState.uploadedFiles.length > 0) {
+      const filesContext = appState.uploadedFiles.map(file => 
+        `File: ${file.name} (${file.type})\nContent:\n${file.content}`
+      ).join('\n\n')
+      const filesBytes = new TextEncoder().encode(filesContext).length
+      const filesTokens = estimateTokenCount(filesContext)
+      contextSize += filesBytes
+      totalTokens += filesTokens
     }
+    
+    // Add user query tokens
+    const queryTokens = estimateTokenCount(appState.currentQuery || '')
+    totalTokens += queryTokens
+    
+    // Add chat history tokens
+    const historyTokens = estimateTokenCount(chatHistoryToSend.map(msg => msg.content).join('\n'))
+    totalTokens += historyTokens
 
-    // Robust: Only add 'name' to assistant messages that do not already have it
-    const aiLabel = (AIoptions || [
-      { label: 'Personal Chat', value: '/.netlify/functions/personal-chat' },
-      { label: 'Anthropic', value: '/.netlify/functions/anthropic-chat' },
-      { label: 'Gemini', value: '/.netlify/functions/gemini-chat' },
-      { label: 'DeepSeek R1', value: '/.netlify/functions/deepseek-r1-chat' }
-    ]).find((opt: { label: string; value: string }) => opt.value === appState.selectedAI)?.label || 'AI';
-    appState.chatHistory = data.map((msg: any) => {
-      if (msg.role === 'assistant' && !msg.name) {
-        return { ...msg, name: aiLabel };
-      }
-      return msg;
+    const response = await postData(uri, {
+      chatHistory: chatHistoryToSend,
+      newValue: appState.currentQuery || '',
+      timeline: appState.timeline,
+      uploadedFiles: appState.uploadedFiles.map(file => ({
+        id: file.id,
+        name: file.name,
+        type: file.type,
+        content: file.content
+      }))
     });
 
-    appState.isLoading = false
-    appState.activeQuestion = {
-      role: 'user',
-      content: ''
-    }
+    const responseTime = Date.now() - startTime
+    const contextKB = Math.round(contextSize / 1024 * 100) / 100
+    
+    // Get AI provider name from URI
+    const aiProvider = uri.includes('personal-chat') ? 'Personal AI' :
+                      uri.includes('anthropic-chat') ? 'Anthropic' :
+                      uri.includes('gemini-chat') ? 'Gemini' :
+                      uri.includes('deepseek-r1-chat') ? 'DeepSeek R1' : 'AI'
+    
+    console.log(`🤖 ${aiProvider}: ${totalTokens} tokens, ${contextKB}KB context, ${appState.uploadedFiles?.length || 0} files`)
+    console.log(`✅ ${aiProvider} response: ${responseTime}ms`)
 
-    appState.currentQuery = ''
-    setTimeout(() => {
-      window.scrollTo(0, document.body.scrollHeight)
-    }, 100)
-  })
-}
-
-export { sendQuery }
+    return response;
+  } catch (error) {
+    const responseTime = Date.now() - startTime
+    const aiProvider = uri.includes('personal-chat') ? 'Personal AI' :
+                      uri.includes('anthropic-chat') ? 'Anthropic' :
+                      uri.includes('gemini-chat') ? 'Gemini' :
+                      uri.includes('deepseek-r1-chat') ? 'DeepSeek R1' : 'AI'
+    
+    console.error(`❌ ${aiProvider} error (${responseTime}ms):`, error)
+    throw error;
+  }
+};

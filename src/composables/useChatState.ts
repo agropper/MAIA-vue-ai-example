@@ -1,75 +1,11 @@
-import type { AppState, TimelineChunk } from '../types'
-import { onMounted, onUnmounted, reactive, watch } from 'vue'
-import OpenAI from 'openai'
-import { API_BASE_URL } from '../utils/apiBase'
+import { reactive } from 'vue'
+import type { AppState, ChatHistory, ChatHistoryItem, UploadedFile } from '../types'
 
-const useChatState = () => {
-  const localStorageKey = 'noshuri'
-  const selectedAILocalStorageKey = 'selectedAI'
-
-  let uri = ''
-  let writeuri = ''
-
-  if (typeof window !== 'undefined') {
-    // Get URI from querystring
-    const urlParams = new URLSearchParams(window.location.search)
-    const queryStringUri = urlParams.get('uri')
-
-    // If there's a URI in the querystring, clear storage before setting new values
-    if (queryStringUri) {
-      sessionStorage.clear()
-      localStorage.clear()
-      uri = queryStringUri
-      sessionStorage.setItem(localStorageKey, uri)
-    } else {
-      // If no querystring URI, fallback to stored value
-      uri = sessionStorage.getItem(localStorageKey) || ''
-      if (uri.length > 0) {
-        sessionStorage.setItem(localStorageKey, uri)
-      }
-    }
-
-    writeuri = uri.replace('Timeline', 'md')
-  }
-
-  const access = [
-    {
-      type: 'Timeline',
-      actions: ['read'],
-      locations: [uri],
-      purpose: 'MAIA - Testing'
-    },
-    {
-      type: 'Markdown',
-      actions: ['write'],
-      locations: [writeuri],
-      purpose: 'MAIA - Testing'
-    }
-  ]
-
-  // Only check storage for selectedAI if we didn't just clear it
-  const selectedAIFromStorage =
-    typeof window !== 'undefined' && !new URLSearchParams(window.location.search).get('uri')
-      ? sessionStorage.getItem(selectedAILocalStorageKey)
-      : null
-
-  // Clean up invalid/old selectedAI values (old Netlify functions or wrong endpoints)
-  let cleanSelectedAI = selectedAIFromStorage;
-  if (cleanSelectedAI) {
-    // If it's an old Netlify function path or wrong endpoint, clear it
-    if (cleanSelectedAI.includes('/.netlify/functions/') || 
-        cleanSelectedAI.includes('/api/openai-chat') ||
-        cleanSelectedAI.includes('/api/open-ai-chat')) {
-      console.log('Clearing old/invalid selectedAI value:', cleanSelectedAI);
-      sessionStorage.removeItem(selectedAILocalStorageKey);
-      cleanSelectedAI = null;
-    }
-  }
-
+export const useChatState = () => {
   const appState: AppState = reactive({
     chatHistory: [],
     editBox: [],
-    userName: 'Demo User',
+    userName: '',
     message: '',
     messageType: '',
     isLoading: false,
@@ -84,21 +20,62 @@ const useChatState = () => {
       role: 'user',
       content: ''
     },
-    uri: uri,
-    writeuri: writeuri,
-    localStorageKey: localStorageKey,
-    access: access,
+    uri: '',
+    writeuri: '',
+    localStorageKey: 'chat-history',
+    access: [],
     currentQuery: '',
     currentFile: null,
-    selectedAI: cleanSelectedAI || `${API_BASE_URL}/personal-chat`,
+    selectedAI: '/api/personal-chat',
     timeline: '',
     timelineChunks: [],
-    selectedEpoch: 1,
-    hasChunkedTimeline: false
+    selectedEpoch: 0,
+    hasChunkedTimeline: false,
+    uploadedFiles: []
   })
 
+  const setChatHistory = (history: ChatHistory) => {
+    appState.chatHistory = history
+  }
+
+  const addMessage = (message: ChatHistoryItem) => {
+    appState.chatHistory.push(message)
+  }
+
+  const clearChat = () => {
+    appState.chatHistory = []
+    appState.uploadedFiles = []
+  }
+
+  const setLoading = (loading: boolean) => {
+    appState.isLoading = loading
+  }
+
+  const setCurrentQuery = (query: string) => {
+    appState.currentQuery = query
+  }
+
+  const setSelectedAI = (ai: string) => {
+    appState.selectedAI = ai
+  }
+
+  const setTimeline = (timeline: string) => {
+    appState.timeline = timeline
+  }
+
+  const setUploadedFiles = (files: UploadedFile[]) => {
+    appState.uploadedFiles = files
+  }
+
+  const addUploadedFile = (file: UploadedFile) => {
+    appState.uploadedFiles.push(file)
+  }
+
+  const removeUploadedFile = (fileId: string) => {
+    appState.uploadedFiles = appState.uploadedFiles.filter(f => f.id !== fileId)
+  }
+
   const writeMessage = (message: string, messageType: string) => {
-    console.log(message)
     appState.message = message
     appState.messageType = messageType
     appState.isMessage = true
@@ -107,79 +84,25 @@ const useChatState = () => {
     }, 5000)
   }
 
-  // Watch for changes to selectedAI and store the value in localStorage
-  watch(
-    () => appState.selectedAI,
-    (newSelectedAI) => {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem(selectedAILocalStorageKey, newSelectedAI)
-      }
-    }
-  )
-
-  // Keeping the epoch watcher for now
-  watch(
-    () => appState.selectedEpoch,
-    (newEpoch) => {
-      console.log('Selected Epoch:', newEpoch)
-      if (appState.hasChunkedTimeline) {
-        const selectedChunk = appState.timelineChunks[newEpoch]
-        if (selectedChunk) {
-          // Update timeline content
-          appState.timeline = selectedChunk.content
-
-          // Find and update the system message in chat history
-          const systemMessageIndex = appState.chatHistory.findIndex((msg) => msg.role === 'system')
-          const newSystemMessage = {
-            role: 'system',
-            content: `Timeline context (${selectedChunk.dateRange.start} to ${selectedChunk.dateRange.end}):\n\n${selectedChunk.content}`
-          } as OpenAI.Chat.ChatCompletionMessageParam
-
-          if (systemMessageIndex !== -1) {
-            // Replace existing system message
-            appState.chatHistory[systemMessageIndex] = newSystemMessage
-          } else if (appState.chatHistory.length === 0) {
-            // Add new system message if chat is empty
-            appState.chatHistory.push(newSystemMessage)
-          }
-        }
-      }
-    }
-  )
-
-  // If no URI is found, write an error message
-  if (!uri && typeof window !== 'undefined') {
-    // writeMessage('No URI found in Querystring or LocalStorage', 'error')
-  }
-
-  // Function to clear specific local storage keys
   const clearLocalStorageKeys = () => {
-    sessionStorage.removeItem(localStorageKey)
-    sessionStorage.removeItem(selectedAILocalStorageKey)
+    sessionStorage.removeItem('noshuri')
+    sessionStorage.removeItem('selectedAI')
     console.log('Local Storage Keys Cleared')
   }
 
-  // Handle key combination for clearing storage
-  const handleKeyCombination = (event: KeyboardEvent) => {
-    if (event.ctrlKey && event.altKey && event.key === 'c') {
-      clearLocalStorageKeys()
-    }
-  }
-
-  // Add keydown listener on mount and remove on unmount
-  onMounted(() => {
-    window.addEventListener('keydown', handleKeyCombination)
-  })
-
-  onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeyCombination)
-  })
-
   return {
     appState,
+    setChatHistory,
+    addMessage,
+    clearChat,
+    setLoading,
+    setCurrentQuery,
+    setSelectedAI,
+    setTimeline,
+    setUploadedFiles,
+    addUploadedFile,
+    removeUploadedFile,
     writeMessage,
     clearLocalStorageKeys
   }
 }
-
-export { useChatState }
