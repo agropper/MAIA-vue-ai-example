@@ -1,77 +1,85 @@
-# 🚀 DigitalOcean Agent Setup Guide
+# DigitalOcean API Setup for MAIA
 
-## Quick Start
+## 🎯 **Current Status**
 
-### 1. Get Your DigitalOcean API Key
+✅ **Agent**: Working (agent-05102025)
+✅ **Knowledge Base**: Connected (devon-viaapp-kb-06162025)
+✅ **Endpoint**: https://vzfujeetn2dkj4d5awhvvibo.agents.do-ai.run/api/v1
+⚠️ **API Key**: Needs to be configured
+
+## 🔑 **Setup DigitalOcean API Key**
+
+### Step 1: Get Your API Key
 1. Go to [DigitalOcean API Tokens](https://cloud.digitalocean.com/account/api/tokens)
-2. Create a new token with read/write permissions
-3. Copy the token
+2. Click "Generate New Token"
+3. Give it a name like "MAIA-Development"
+4. Select "Write" scope
+5. Copy the generated token
 
-### 2. Setup Environment
+### Step 2: Update .env File
+Replace the placeholder in your `.env` file:
+
 ```bash
-# Copy the environment template
-cp env.template .env
+# Current (placeholder)
+DIGITALOCEAN_TOKEN=your-digitalocean-api-key-here
 
-# Edit .env and add your API key
-nano .env
+# Replace with your actual token
+DIGITALOCEAN_TOKEN=dop_v1_1234567890abcdef...
 ```
 
-### 3. Run the Setup Wizard
+### Step 3: Restart Server
 ```bash
-# Setup new MAIA environment
-npm run setup-do
-
-# List existing resources
-npm run setup-do:list
-
-# Cleanup resources
-npm run setup-do:cleanup
-
-# Show help
-npm run setup-do:help
+pkill -f "node.*server-secure.js"
+node server-secure.js
 ```
 
-## What the Wizard Does
+## ✅ **Test the Setup**
 
-1. **Creates a Personal AI Agent** for your patient
-2. **Creates a Knowledge Base** for health records  
-3. **Associates** the Knowledge Base with the Agent
-4. **Updates** your `.env` file with the new endpoint
-5. **Provides** the agent endpoint for MAIA to use
+After updating the API key, test these endpoints:
 
-## Available Commands
+```bash
+# Test agent info
+curl -s http://localhost:3001/api/current-agent | jq '.agent.name'
 
-| Command | Description |
-|---------|-------------|
-| `npm run setup-do` | Setup new MAIA environment |
-| `npm run setup-do:list` | List existing agents/KBs |
-| `npm run setup-do:cleanup` | Remove MAIA resources |
-| `npm run setup-do:help` | Show help |
+# Test knowledge base
+curl -s http://localhost:3001/api/current-agent | jq '.knowledgeBase.name'
 
-## Environment Variables
+# Test endpoint
+curl -s http://localhost:3001/api/current-agent | jq '.endpoint'
+```
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DIGITALOCEAN_API_KEY` | Your DigitalOcean API key | ✅ |
-| `PATIENT_ID` | Patient ID (default: demo_patient_001) | ❌ |
+## 🎯 **Expected Results**
 
-## Next Steps
+- **Agent Name**: `agent-05102025`
+- **Knowledge Base**: `devon-viaapp-kb-06162025`
+- **Status**: `running`
+- **No Errors**: In browser console
 
-After running the setup:
-1. Restart MAIA: `docker-compose -f ../docker-compose.maia-secure.yml restart maia-vue-ai-secure`
-2. Access MAIA: http://localhost:3001
-3. Upload health records to populate the knowledge base
+## 🚀 **Benefits**
 
-## Troubleshooting
+With the API key configured:
+- ✅ **Full Agent Integration**: MAIA can use the DigitalOcean agent
+- ✅ **Knowledge Base Access**: Can search patient records
+- ✅ **Real AI Responses**: Powered by your DigitalOcean agent
+- ✅ **Cloud Deployment Ready**: Same agent for local and cloud
 
-### "DIGITALOCEAN_API_KEY environment variable is required"
-- Make sure you have a `.env` file in the MAIA-vue-ai-example directory
-- Add your DigitalOcean API key to the `.env` file
+## 🔧 **Troubleshooting**
 
-### "DigitalOcean API error: 401"
-- Check that your API key is correct
-- Ensure the API key has read/write permissions
+### If you get API errors:
+1. **Check API Key**: Ensure it's correct and has write permissions
+2. **Check Agent Status**: Verify agent is running in DigitalOcean console
+3. **Check Network**: Ensure your server can reach DigitalOcean API
 
-### "DigitalOcean API error: 404"
-- The API endpoint might have changed
-- Check the latest DigitalOcean API documentation 
+### If agent info is missing:
+1. **Restart Server**: After updating .env
+2. **Check Logs**: Look for API connection errors
+3. **Verify Agent**: Check DigitalOcean console for agent status
+
+## 🎉 **Next Steps**
+
+Once the API key is configured:
+1. **Test Chat**: Try asking MAIA a question
+2. **Test Knowledge Base**: Upload patient documents
+3. **Deploy to Cloud**: Use same agent for production
+
+Your MAIA application is almost complete - just need the API key! 🚀 

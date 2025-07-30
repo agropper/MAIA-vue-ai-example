@@ -20,6 +20,10 @@
     "migrate": "node scripts/migrate-couchdb-to-postgres.js",
     "migrate-to-cloud": "node scripts/migrate-local-to-cloud.js",
     "db:init": "node scripts/init-database.js",
+    "workflow": "node scripts/dev-workflow.js",
+    "workflow:help": "node scripts/dev-workflow.js help",
+    "test-cloudant": "node scripts/test-cloudant.js",
+    "validate-cloudant": "node scripts/test-cloudant.js",
     "backup": "node scripts/migrate-local-to-cloud.js backup",
     "validate-cloud": "node scripts/migrate-local-to-cloud.js validate"
   },
