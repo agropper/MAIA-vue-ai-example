@@ -87,7 +87,7 @@
                   label="Create New Knowledge Base"
                   color="primary"
                   icon="add"
-                  @click="showCreateKbDialog = true"
+                  @click="handleCreateKnowledgeBase"
                   :disable="!hasUploadedDocuments"
                   :title="hasUploadedDocuments ? 'Create a new KB from uploaded documents' : 'Upload documents first using the paper clip'"
                 />
@@ -104,6 +104,23 @@
                     <q-item-section>
                       <q-item-label>
                         {{ kb.name }}
+                        <!-- Protection Status Icon -->
+                        <q-icon 
+                          v-if="kb.isProtected" 
+                          name="lock" 
+                          color="warning" 
+                          size="sm"
+                          class="q-ml-xs"
+                          title="Protected KB"
+                        />
+                        <q-icon 
+                          v-else 
+                          name="public" 
+                          color="positive" 
+                          size="sm"
+                          class="q-ml-xs"
+                          title="Public KB"
+                        />
                         <q-chip 
                           v-if="isKnowledgeBaseConnected(kb)" 
                           size="sm" 
@@ -122,11 +139,32 @@
                         >
                           Available
                         </q-chip>
+                        <!-- Owner info for protected KBs -->
+                        <q-chip 
+                          v-if="kb.isProtected && kb.owner" 
+                          size="sm" 
+                          color="warning" 
+                          text-color="white"
+                          class="q-ml-sm"
+                        >
+                          {{ kb.owner }}
+                        </q-chip>
                       </q-item-label>
                       <q-item-label caption>{{ kb.description || 'No description' }}</q-item-label>
                     </q-item-section>
                     <q-item-section side>
                       <div class="row q-gutter-xs">
+                        <!-- Protection Toggle (only for KB owner) -->
+                        <q-btn
+                          v-if="currentUser && kb.owner === currentUser.username"
+                          :icon="kb.isProtected ? 'lock_open' : 'lock'"
+                          :color="kb.isProtected ? 'warning' : 'grey'"
+                          size="sm"
+                          flat
+                          @click="toggleKBProtection(kb)"
+                          :title="kb.isProtected ? 'Remove protection' : 'Add protection'"
+                        />
+                        
                         <!-- DETACH button for connected KBs -->
                         <q-btn
                           v-if="isKnowledgeBaseConnected(kb)"
@@ -358,6 +396,12 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Passkey Authentication Dialog -->
+    <PasskeyAuthDialog
+      v-model="showPasskeyAuthDialog"
+      @authenticated="handlePasskeyAuthenticated"
+    />
   </q-dialog>
 </template>
 
@@ -384,6 +428,7 @@ import {
   QTooltip
 } from 'quasar'
 import AgentCreationWizard from './AgentCreationWizard.vue'
+import PasskeyAuthDialog from './PasskeyAuthDialog.vue'
 import type { UploadedFile } from '../types'
 
 export interface DigitalOceanAgent {
@@ -405,6 +450,8 @@ export interface DigitalOceanKnowledgeBase {
   created_at: string
   updated_at: string
   region: string
+  isProtected: boolean
+  owner?: string
 }
 
 export default defineComponent({
@@ -424,6 +471,7 @@ export default defineComponent({
     QItemSection,
     QItemLabel,
     AgentCreationWizard,
+    PasskeyAuthDialog,
     QCheckbox,
     QChip,
     QTooltip
@@ -438,7 +486,7 @@ export default defineComponent({
       default: () => []
     }
   },
-  emits: ['update:modelValue', 'agent-created', 'agent-selected', 'agent-updated', 'refresh-agent-data'],
+  emits: ['update:modelValue', 'agent-created', 'agent-selected', 'agent-updated', 'refresh-agent-data', 'user-authenticated'],
   setup(props, { emit }) {
     const $q = useQuasar()
     
@@ -469,6 +517,11 @@ export default defineComponent({
     const newKbDescription = ref('')
     const isCreatingKb = ref(false)
     const selectedDocuments = ref<string[]>([])
+
+    // Passkey Authentication state
+    const showPasskeyAuthDialog = ref(false)
+    const currentUser = ref<any>(null)
+    const isAuthenticated = ref(false)
 
     // Dialog state for confirmations
     const showConfirmDialog = ref(false)
@@ -681,6 +734,24 @@ export default defineComponent({
       }
     }
 
+    // Passkey authentication methods
+    const handlePasskeyAuthenticated = (userData: { userId: string }) => {
+      currentUser.value = {
+        username: userData.userId,
+        displayName: userData.userId
+      }
+      isAuthenticated.value = true
+      showPasskeyAuthDialog.value = false
+      
+      // Emit the current user to parent component
+      emit('user-authenticated', currentUser.value)
+      
+      // Now proceed with KB creation
+      showCreateKbDialog.value = true
+    }
+
+
+
     // Load agent info when dialog opens
     const onDialogOpen = () => {
       loadAgentInfo()
@@ -841,7 +912,19 @@ export default defineComponent({
 
     // Handle create new KB
     const handleCreateKnowledgeBase = () => {
-      showCreateKbDialog.value = true
+      console.log('🔍 handleCreateKnowledgeBase called')
+      console.log('🔍 isAuthenticated:', isAuthenticated.value)
+      console.log('🔍 showPasskeyAuthDialog:', showPasskeyAuthDialog.value)
+      
+      if (!isAuthenticated.value) {
+        // Show passkey authentication first
+        console.log('🔍 Showing passkey auth dialog')
+        showPasskeyAuthDialog.value = true
+      } else {
+        // User is already authenticated, show KB creation dialog
+        console.log('🔍 Showing KB creation dialog')
+        showCreateKbDialog.value = true
+      }
     }
 
     // Handle file upload
@@ -930,7 +1013,8 @@ export default defineComponent({
           body: JSON.stringify({
             name: newKbName.value,
             description: newKbDescription.value,
-            document_uuids: selectedDocuments.value
+            document_uuids: selectedDocuments.value,
+            owner: currentUser.value?.username // Add owner information
           })
         });
 
@@ -1086,6 +1170,65 @@ export default defineComponent({
       }
     };
 
+    // Toggle KB protection
+    const toggleKBProtection = async (kb: DigitalOceanKnowledgeBase) => {
+      try {
+        if (kb.isProtected) {
+          // Remove protection
+          const response = await fetch('/api/kb-protection/unprotect-kb', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kbId: kb.uuid,
+              owner: currentUser.value?.username
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            $q.notify({
+              type: 'positive',
+              message: 'Knowledge base protection removed'
+            });
+            await loadAgentInfo(); // Refresh the list
+          } else {
+            throw new Error(result.error);
+          }
+        } else {
+          // Add protection
+          const response = await fetch('/api/kb-protection/protect-kb', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kbId: kb.uuid,
+              kbName: kb.name,
+              owner: currentUser.value?.username,
+              description: `Protected by ${currentUser.value?.displayName || currentUser.value?.username}`
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            $q.notify({
+              type: 'positive',
+              message: 'Knowledge base is now protected'
+            });
+            await loadAgentInfo(); // Refresh the list
+          } else {
+            throw new Error(result.error);
+          }
+        }
+      } catch (error: any) {
+        console.error('Error toggling KB protection:', error);
+        $q.notify({
+          type: 'negative',
+          message: `Failed to ${kb.isProtected ? 'remove' : 'add'} protection: ${error.message}`
+        });
+      }
+    };
+
     return {
       showDialog,
       currentAgent,
@@ -1132,7 +1275,11 @@ export default defineComponent({
       confirmAction,
       confirmMessage,
       confirmTitle,
-      executeConfirmAction
+      executeConfirmAction,
+      currentUser,
+      toggleKBProtection,
+      showPasskeyAuthDialog,
+      handlePasskeyAuthenticated
     }
   }
 })

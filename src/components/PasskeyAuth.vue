@@ -1,98 +1,70 @@
 <template>
   <div class="passkey-auth">
-    <!-- Login Form -->
-    <div v-if="!isRegistering && !isAuthenticating" class="auth-form">
-      <h2>Sign in to MAIA</h2>
+    <div v-if="!isAuthenticated" class="auth-container">
+      <h2>{{ isRegistering ? 'Register with Passkey' : 'Login with Passkey' }}</h2>
       
-      <div class="form-group">
-        <label for="username">Username</label>
-        <input 
-          id="username"
-          v-model="username" 
-          type="text" 
-          placeholder="Enter your username"
-          :disabled="isLoading"
-        />
-      </div>
-
-      <div class="auth-buttons">
-        <button 
-          @click="startLogin" 
-          :disabled="!username || isLoading"
-          class="btn btn-primary"
-        >
-          <span v-if="isLoading">Signing in...</span>
-          <span v-else>Sign in with Passkey</span>
-        </button>
-        
-        <button 
-          @click="switchToRegister" 
-          :disabled="isLoading"
-          class="btn btn-secondary"
-        >
-          Create Account
-        </button>
-      </div>
-    </div>
-
-    <!-- Registration Form -->
-    <div v-if="isRegistering && !isAuthenticating" class="auth-form">
-      <h2>Create MAIA Account</h2>
-      
-      <div class="form-group">
-        <label for="reg-username">Username</label>
-        <input 
-          id="reg-username"
-          v-model="username" 
-          type="text" 
-          placeholder="Choose a username"
-          :disabled="isLoading"
-          @blur="checkUsername"
-        />
-        <div v-if="usernameCheck" class="username-feedback">
-          <span v-if="usernameCheck.available" class="available">✓ Username available</span>
-          <span v-else class="unavailable">✗ Username taken</span>
+      <!-- Registration Form -->
+      <div v-if="isRegistering" class="auth-form">
+        <div class="form-group">
+          <label for="username">Username:</label>
+          <input 
+            id="username" 
+            v-model="username" 
+            type="text" 
+            placeholder="Enter username"
+            required
+          />
         </div>
-      </div>
-
-      <div class="form-group">
-        <label for="display-name">Display Name</label>
-        <input 
-          id="display-name"
-          v-model="displayName" 
-          type="text" 
-          placeholder="Enter your display name"
-          :disabled="isLoading"
-        />
-      </div>
-
-      <div class="auth-buttons">
-        <button 
-          @click="startRegistration" 
-          :disabled="!canRegister || isLoading"
-          class="btn btn-primary"
-        >
-          <span v-if="isLoading">Creating account...</span>
-          <span v-else>Create Account with Passkey</span>
-        </button>
         
-        <button 
-          @click="switchToLogin" 
-          :disabled="isLoading"
-          class="btn btn-secondary"
-        >
-          Back to Sign In
+        <div class="form-group">
+          <label for="displayName">Display Name:</label>
+          <input 
+            id="displayName" 
+            v-model="displayName" 
+            type="text" 
+            placeholder="Enter display name"
+            required
+          />
+        </div>
+        
+        <button @click="register" :disabled="isLoading" class="auth-button">
+          {{ isLoading ? 'Registering...' : 'Register with Passkey' }}
+        </button>
+      </div>
+      
+      <!-- Login Form -->
+      <div v-else class="auth-form">
+        <div class="form-group">
+          <label for="loginUsername">Username:</label>
+          <input 
+            id="loginUsername" 
+            v-model="username" 
+            type="text" 
+            placeholder="Enter username"
+            required
+          />
+        </div>
+        
+        <button @click="login" :disabled="isLoading" class="auth-button">
+          {{ isLoading ? 'Logging in...' : 'Login with Passkey' }}
+        </button>
+      </div>
+      
+      <!-- Toggle between login/register -->
+      <div class="auth-toggle">
+        <button @click="toggleMode" class="toggle-button">
+          {{ isRegistering ? 'Already have an account? Login' : 'Need an account? Register' }}
         </button>
       </div>
     </div>
-
-    <!-- Authentication in Progress -->
-    <div v-if="isAuthenticating" class="auth-progress">
-      <div class="spinner"></div>
-      <p>{{ authMessage }}</p>
-      <button @click="cancelAuth" class="btn btn-secondary">Cancel</button>
+    
+    <!-- Authenticated User Info -->
+    <div v-else class="user-info">
+      <h3>Welcome, {{ currentUser.displayName }}!</h3>
+      <p>Username: {{ currentUser.username }}</p>
+      <button @click="logout" class="logout-button">Logout</button>
     </div>
-
+    
     <!-- Error Messages -->
     <div v-if="error" class="error-message">
       {{ error }}
@@ -101,362 +73,264 @@
 </template>
 
 <script>
-import { ref, computed, watch } from 'vue'
-import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
+import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 
 export default {
   name: 'PasskeyAuth',
-  emits: ['authenticated', 'registered'],
-  setup(props, { emit }) {
-    const username = ref('')
-    const displayName = ref('')
-    const isLoading = ref(false)
-    const isRegistering = ref(false)
-    const isAuthenticating = ref(false)
-    const authMessage = ref('')
-    const error = ref('')
-    const usernameCheck = ref(null)
-
-    // Computed properties
-    const canRegister = computed(() => {
-      return username.value && 
-             displayName.value && 
-             usernameCheck.value?.available &&
-             !isLoading.value
-    })
-
-    // Watch for username changes to check availability
-    watch(username, (newUsername) => {
-      if (newUsername && newUsername.length >= 3) {
-        checkUsername()
-      } else {
-        usernameCheck.value = null
+  data() {
+    return {
+      isAuthenticated: false,
+      isRegistering: false,
+      isLoading: false,
+      username: '',
+      displayName: '',
+      currentUser: null,
+      error: ''
+    };
+  },
+  
+  async mounted() {
+    await this.checkAuthStatus();
+  },
+  
+  methods: {
+    async checkAuthStatus() {
+      try {
+        const response = await fetch('/api/passkey/auth-status');
+        const data = await response.json();
+        
+        if (data.authenticated) {
+          this.isAuthenticated = true;
+          this.currentUser = data.user;
+          this.$emit('authenticated', data.user);
+        }
+      } catch (error) {
+        console.error('Auth status check failed:', error);
       }
-    })
-
-    // Check username availability
-    const checkUsername = async () => {
-      if (!username.value || username.value.length < 3) return
+    },
+    
+    async register() {
+      if (!this.username || !this.displayName) {
+        this.error = 'Please fill in all fields';
+        return;
+      }
+      
+      this.isLoading = true;
+      this.error = '';
       
       try {
-        const response = await fetch(`/api/auth/check-username/${username.value}`)
-        const data = await response.json()
-        usernameCheck.value = data
-      } catch (err) {
-        console.error('Error checking username:', err)
-      }
-    }
-
-    // Switch to registration mode
-    const switchToRegister = () => {
-      isRegistering.value = true
-      error.value = ''
-      usernameCheck.value = null
-    }
-
-    // Switch to login mode
-    const switchToLogin = () => {
-      isRegistering.value = false
-      error.value = ''
-      usernameCheck.value = null
-    }
-
-    // Start registration process
-    const startRegistration = async () => {
-      if (!canRegister.value) return
-
-      isLoading.value = true
-      error.value = ''
-      isAuthenticating.value = true
-      authMessage.value = 'Creating your account...'
-
-      try {
-        // Step 1: Get registration options from server
-        const response = await fetch('/api/auth/register/start', {
+        // Step 1: Get registration options
+        const optionsResponse = await fetch('/api/passkey/generate-registration-options', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username: username.value,
-            displayName: displayName.value
+            username: this.username,
+            displayName: this.displayName
           })
-        })
-
-        const data = await response.json()
+        });
         
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to start registration')
+        const options = await optionsResponse.json();
+        
+        if (!optionsResponse.ok) {
+          throw new Error(options.error || 'Failed to get registration options');
         }
-
-        authMessage.value = 'Creating your passkey...'
-
-        // Step 2: Create passkey in browser
-        const registrationResponse = await startRegistration(data.options)
-
-        authMessage.value = 'Verifying your passkey...'
-
-        // Step 3: Verify with server
-        const verifyResponse = await fetch('/api/auth/register/finish', {
+        
+        // Step 2: Start registration on client
+        const registrationResponse = await startRegistration(options);
+        
+        // Step 3: Verify registration on server
+        const verifyResponse = await fetch('/api/passkey/verify-registration', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: data.userId,
+            username: this.username,
             response: registrationResponse
           })
-        })
-
-        const verifyData = await verifyResponse.json()
+        });
         
-        if (verifyData.success) {
-          emit('registered', verifyData.user)
+        const result = await verifyResponse.json();
+        
+        if (result.success) {
+          this.isAuthenticated = true;
+          this.currentUser = result.user;
+          this.$emit('authenticated', result.user);
+          this.error = '';
         } else {
-          throw new Error(verifyData.error || 'Registration failed')
+          throw new Error(result.error || 'Registration failed');
         }
-
-      } catch (err) {
-        console.error('Registration error:', err)
-        error.value = err.message || 'Registration failed'
+      } catch (error) {
+        console.error('Registration error:', error);
+        this.error = error.message || 'Registration failed';
       } finally {
-        isLoading.value = false
-        isAuthenticating.value = false
-        authMessage.value = ''
+        this.isLoading = false;
       }
-    }
-
-    // Start login process
-    const startLogin = async () => {
-      if (!username.value) return
-
-      isLoading.value = true
-      error.value = ''
-      isAuthenticating.value = true
-      authMessage.value = 'Starting authentication...'
-
+    },
+    
+    async login() {
+      if (!this.username) {
+        this.error = 'Please enter username';
+        return;
+      }
+      
+      this.isLoading = true;
+      this.error = '';
+      
       try {
-        // Step 1: Get authentication options from server
-        const response = await fetch('/api/auth/login/start', {
+        // Step 1: Get authentication options
+        const optionsResponse = await fetch('/api/passkey/generate-authentication-options', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            username: username.value
-          })
-        })
-
-        const data = await response.json()
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: this.username })
+        });
         
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to start authentication')
+        const options = await optionsResponse.json();
+        
+        if (!optionsResponse.ok) {
+          throw new Error(options.error || 'Failed to get authentication options');
         }
-
-        authMessage.value = 'Authenticating with your passkey...'
-
-        // Step 2: Authenticate with passkey
-        const authenticationResponse = await startAuthentication(data.options)
-
-        authMessage.value = 'Verifying authentication...'
-
-        // Step 3: Verify with server
-        const verifyResponse = await fetch('/api/auth/login/finish', {
+        
+        // Step 2: Start authentication on client
+        const authenticationResponse = await startAuthentication(options);
+        
+        // Step 3: Verify authentication on server
+        const verifyResponse = await fetch('/api/passkey/verify-authentication', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            username: this.username,
             response: authenticationResponse
           })
-        })
-
-        const verifyData = await verifyResponse.json()
+        });
         
-        if (verifyData.success) {
-          emit('authenticated', verifyData.user)
+        const result = await verifyResponse.json();
+        
+        if (result.success) {
+          this.isAuthenticated = true;
+          this.currentUser = result.user;
+          this.$emit('authenticated', result.user);
+          this.error = '';
         } else {
-          throw new Error(verifyData.error || 'Authentication failed')
+          throw new Error(result.error || 'Authentication failed');
         }
-
-      } catch (err) {
-        console.error('Login error:', err)
-        error.value = err.message || 'Authentication failed'
+      } catch (error) {
+        console.error('Authentication error:', error);
+        this.error = error.message || 'Authentication failed';
       } finally {
-        isLoading.value = false
-        isAuthenticating.value = false
-        authMessage.value = ''
+        this.isLoading = false;
       }
-    }
-
-    // Cancel authentication
-    const cancelAuth = () => {
-      isAuthenticating.value = false
-      isLoading.value = false
-      authMessage.value = ''
-      error.value = ''
-    }
-
-    return {
-      username,
-      displayName,
-      isLoading,
-      isRegistering,
-      isAuthenticating,
-      authMessage,
-      error,
-      usernameCheck,
-      canRegister,
-      checkUsername,
-      switchToRegister,
-      switchToLogin,
-      startRegistration,
-      startLogin,
-      cancelAuth
+    },
+    
+    async logout() {
+      try {
+        await fetch('/api/passkey/logout', { method: 'POST' });
+        this.isAuthenticated = false;
+        this.currentUser = null;
+        this.$emit('logout');
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    },
+    
+    toggleMode() {
+      this.isRegistering = !this.isRegistering;
+      this.error = '';
     }
   }
-}
+};
 </script>
 
 <style scoped>
 .passkey-auth {
   max-width: 400px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 20px;
+}
+
+.auth-container {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .auth-form {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.auth-form h2 {
-  margin: 0 0 1.5rem 0;
-  color: #333;
-  text-align: center;
+  margin-bottom: 20px;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 15px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #555;
+  margin-bottom: 5px;
+  font-weight: bold;
 }
 
 .form-group input {
   width: 100%;
-  padding: 0.75rem;
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 16px;
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-.form-group input:disabled {
-  background-color: #f8f9fa;
-  cursor: not-allowed;
-}
-
-.username-feedback {
-  margin-top: 0.25rem;
-  font-size: 0.875rem;
-}
-
-.username-feedback .available {
-  color: #28a745;
-}
-
-.username-feedback .unavailable {
-  color: #dc3545;
-}
-
-.auth-buttons {
-  margin-top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.btn {
-  padding: 0.75rem 1.5rem;
+.auth-button {
+  width: 100%;
+  padding: 12px;
+  background: #007bff;
+  color: white;
   border: none;
   border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  margin-bottom: 10px;
 }
 
-.btn:disabled {
-  opacity: 0.6;
+.auth-button:disabled {
+  background: #ccc;
   cursor: not-allowed;
 }
 
-.btn-primary {
-  background-color: #007bff;
-  color: white;
+.auth-button:hover:not(:disabled) {
+  background: #0056b3;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background-color: #0056b3;
+.toggle-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-.btn-secondary {
-  background-color: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: #545b62;
-}
-
-.auth-progress {
+.user-info {
+  background: #e8f5e8;
+  padding: 20px;
+  border-radius: 8px;
   text-align: center;
-  padding: 2rem;
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #007bff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
+.logout-button {
+  padding: 8px 16px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.logout-button:hover {
+  background: #c82333;
 }
 
 .error-message {
-  background-color: #f8d7da;
+  background: #f8d7da;
   color: #721c24;
-  padding: 0.75rem;
+  padding: 10px;
   border-radius: 4px;
-  margin-top: 1rem;
-  text-align: center;
-}
-
-@media (max-width: 480px) {
-  .passkey-auth {
-    padding: 1rem;
-  }
-  
-  .auth-form {
-    padding: 1.5rem;
-  }
+  margin-top: 10px;
+  border: 1px solid #f5c6cb;
 }
 </style> 

@@ -63,6 +63,7 @@ export default defineComponent({
     const showAgentManagementDialog = ref(false)
     const currentAgent = ref<any>(null)
     const agentWarning = ref<string>('')
+    const currentUser = ref<any>(null)
 
     // Fetch current agent information on component mount
     const fetchCurrentAgent = async () => {
@@ -134,6 +135,11 @@ export default defineComponent({
 
     const handleManageAgent = () => {
       showAgentManagementDialog.value = true
+    }
+
+    const handleUserAuthenticated = (userData: any) => {
+      currentUser.value = userData
+      console.log('🔍 User authenticated:', userData)
     }
 
     const editMessage = (idx: number) => {
@@ -315,7 +321,9 @@ export default defineComponent({
       showAgentManagementDialog,
       currentAgent,
       agentWarning,
+      currentUser,
       handleManageAgent,
+      handleUserAuthenticated,
       refreshAgentData
     }
   }
@@ -367,6 +375,7 @@ export default defineComponent({
     @get-system-message-type="getSystemMessageType"
     :currentAgent="currentAgent"
     :warning="agentWarning"
+    :currentUser="currentUser"
     @manage-agent="handleManageAgent"
   />
 
@@ -407,5 +416,6 @@ export default defineComponent({
     :uploadedFiles="appState.uploadedFiles"
     @agent-updated="handleAgentUpdated"
     @refresh-agent-data="refreshAgentData"
+    @user-authenticated="handleUserAuthenticated"
   />
 </template>

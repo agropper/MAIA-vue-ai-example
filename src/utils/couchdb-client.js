@@ -45,6 +45,73 @@ export class CouchDBClient {
     }
   }
 
+  async createDatabase(databaseName) {
+    try {
+      await this.db.db.create(databaseName)
+      console.log(`✅ Database '${databaseName}' created`)
+      return true
+    } catch (error) {
+      if (error.statusCode === 412) {
+        console.log(`✅ Database '${databaseName}' already exists`)
+        return true
+      } else {
+        console.error('❌ Failed to create database:', error)
+        throw error
+      }
+    }
+  }
+
+  async saveDocument(databaseName, document) {
+    try {
+      const db = this.db.use(databaseName)
+      const result = await db.insert(document)
+      return {
+        id: result.id,
+        rev: result.rev,
+        ok: result.ok
+      }
+    } catch (error) {
+      console.error('❌ Failed to save document:', error)
+      throw error
+    }
+  }
+
+  async getDocument(databaseName, documentId) {
+    try {
+      const db = this.db.use(databaseName)
+      return await db.get(documentId)
+    } catch (error) {
+      if (error.statusCode === 404) {
+        return null
+      }
+      console.error('❌ Failed to get document:', error)
+      throw error
+    }
+  }
+
+  async getAllDocuments(databaseName) {
+    try {
+      const db = this.db.use(databaseName)
+      const result = await db.list({ include_docs: true })
+      return result.rows.map(row => row.doc)
+    } catch (error) {
+      console.error('❌ Failed to get all documents:', error)
+      throw error
+    }
+  }
+
+  async deleteDocument(databaseName, documentId) {
+    try {
+      const db = this.db.use(databaseName)
+      const doc = await db.get(documentId)
+      const result = await db.destroy(documentId, doc._rev)
+      return result
+    } catch (error) {
+      console.error('❌ Failed to delete document:', error)
+      throw error
+    }
+  }
+
   async testConnection() {
     try {
       const info = await this.db.info()

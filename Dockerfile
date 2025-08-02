@@ -25,9 +25,12 @@ RUN npm ci --only=production
 # Copy built frontend
 COPY --from=builder /app/dist ./dist
 
-# Copy server files
+# Copy server files and source code
 COPY server.js ./
-COPY x-server.js ./
+COPY src/ ./src/
+
+# Create test directory to satisfy pdf-parse
+RUN mkdir -p test/data && echo "dummy" > test/data/05-versions-space.pdf
 
 # Create necessary directories
 RUN mkdir -p /app/logs

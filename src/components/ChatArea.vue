@@ -4,6 +4,7 @@
     <AgentStatusIndicator
       :agent="currentAgent"
       :warning="warning"
+      :currentUser="currentUser"
       @manage="$emit('manage-agent')"
     />
     
@@ -129,6 +130,10 @@ export default defineComponent({
     warning: {
       type: String,
       default: ''
+    },
+    currentUser: {
+      type: Object as PropType<any>,
+      default: null
     }
   },
   emits: [

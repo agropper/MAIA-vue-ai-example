@@ -1,6 +1,17 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
+// Global error handling to prevent server crashes
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Don't exit the process, just log the error
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit the process, just log the error
+});
+
 // Debug environment variables
 console.log('🔍 Environment Debug:');
 console.log('Current working directory:', process.cwd());
@@ -16,6 +27,7 @@ import rateLimit from 'express-rate-limit';
 import fetch from 'node-fetch';
 import pdf from 'pdf-parse';
 import multer from 'multer';
+import session from 'express-session';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -1030,21 +1042,46 @@ app.delete('/api/agents/:agentId', async (req, res) => {
   }
 });
 
-// List knowledge bases
+// List knowledge bases (replaced by unified endpoint below)
+
+// Unified KB list with protection status
 app.get('/api/knowledge-bases', async (req, res) => {
   try {
-    const knowledgeBases = await doRequest('/v2/gen-ai/knowledge_bases');
-    console.log(`📚 Knowledge bases response:`, JSON.stringify(knowledgeBases, null, 2));
-    
-    // Handle different response formats
-    const kbData = knowledgeBases.data || knowledgeBases.knowledge_bases || knowledgeBases;
-    const kbArray = Array.isArray(kbData) ? kbData : [];
-    
-    console.log(`📚 Found ${kbArray.length} knowledge bases`);
-    res.json(kbArray);
+    // 1. Fetch KBs from DigitalOcean
+    const doResponse = await doRequest('/v2/gen-ai/knowledge_bases?page=1&per_page=1000');
+    const doKBs = (doResponse.knowledge_bases || doResponse.data?.knowledge_bases || doResponse.data || []).map(kb => ({
+      ...kb,
+      id: kb.uuid || kb.id // normalize id field
+    }));
+
+    // 2. Fetch protection metadata from Cloudant
+    let protectionDocs = [];
+    try {
+      protectionDocs = await couchDBClient.getAllDocuments('maia_knowledge_bases');
+    } catch (err) {
+      console.warn('Could not fetch KB protection metadata from Cloudant:', err.message);
+    }
+    const protectionMap = {};
+    for (const doc of protectionDocs) {
+      if (doc.kbId || doc.id || doc._id) {
+        protectionMap[doc.kbId || doc.id || doc._id] = doc;
+      }
+    }
+
+    // 3. Merge protection info into DO KBs
+    const mergedKBs = doKBs.map(kb => {
+      const protection = protectionMap[kb.id] || {};
+      return {
+        ...kb,
+        isProtected: !!protection.isProtected,
+        owner: protection.owner || null
+      };
+    });
+
+    res.json(mergedKBs);
   } catch (error) {
-    console.error('❌ List knowledge bases error:', error);
-    res.status(500).json({ message: `Failed to list knowledge bases: ${error.message}` });
+    console.error('❌ Failed to fetch merged knowledge bases:', error);
+    res.status(500).json({ error: 'Failed to fetch knowledge bases' });
   }
 });
 
@@ -1117,7 +1154,7 @@ app.post('/api/knowledge-bases', async (req, res) => {
     const { name, description, document_uuids } = req.body;
     
     // Get available embedding models first
-    let embeddingModelId = 'text-embedding-ada-002'; // Default fallback
+    let embeddingModelId = '22653204-79ed-11ef-bf8f-4e013e2ddde4'; // Default fallback - using the embedding model from the existing KB
     
     try {
       const modelsResponse = await doRequest('/v2/gen-ai/models');
@@ -1141,8 +1178,8 @@ app.post('/api/knowledge-bases', async (req, res) => {
     const kbData = {
       name,
       description,
-      database_uuid: process.env.DIGITALOCEAN_OPENSEARCH_DB_UUID || 'genai-driftwood',
-      embedding_model_id: embeddingModelId
+      database_uuid: process.env.DIGITALOCEAN_OPENSEARCH_DB_UUID || 'genai-driftwood'
+      // Not specifying embedding_model_id - let DigitalOcean choose the default
     };
 
     console.log(`📚 Creating knowledge base: ${name} with embedding model: ${embeddingModelId}`);
@@ -1576,6 +1613,70 @@ If you're unsure about medical advice, recommend consulting with a healthcare pr
     res.status(500).json({ message: `Failed to setup MAIA environment: ${error.message}` });
   }
 });
+
+// =============================================================================
+// PASSKEY AUTHENTICATION ROUTES
+// =============================================================================
+
+// Import passkey routes
+import passkeyRoutes from './src/routes/passkey-routes.js';
+
+// Mount passkey routes
+app.use('/api/passkey', passkeyRoutes);
+
+// Add KB protection check middleware
+app.use('/api/connect-kb/:kbId', async (req, res, next) => {
+  try {
+    const { kbId } = req.params;
+    
+    // Check if KB is protected
+    const protectionDoc = await couchDBClient.getDocument('maia_knowledge_bases', kbId);
+    
+    if (protectionDoc && protectionDoc.isProtected) {
+      // KB is protected - require authentication
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ 
+          error: 'Authentication required',
+          requiresAuth: true,
+          kbName: protectionDoc.kbName
+        });
+      }
+      
+      // Check if user is the owner
+      if (protectionDoc.owner !== userId) {
+        return res.status(403).json({ 
+          error: 'Access denied. You are not the owner of this knowledge base.',
+          requiresAuth: true,
+          kbName: protectionDoc.kbName
+        });
+      }
+    }
+    
+    next();
+  } catch (error) {
+    console.error('❌ Error checking KB protection:', error);
+    next();
+  }
+});
+
+// =============================================================================
+// KNOWLEDGE BASE PROTECTION ROUTES
+// =============================================================================
+
+// Import KB protection routes
+import kbProtectionRoutes, { setCouchDBClient } from './src/routes/kb-protection-routes.js';
+
+// Pass the CouchDB client to the routes
+setCouchDBClient(couchDBClient);
+
+// Mount KB protection routes
+app.use('/api/kb-protection', kbProtectionRoutes);
+
+// =============================================================================
+// CATCH-ALL ROUTE FOR SPA
+// =============================================================================
 
 // Catch-all route for SPA
 app.get('*', (req, res) => {

@@ -84,12 +84,23 @@ export default defineComponent({
     warning: {
       type: String,
       default: ''
+    },
+    currentUser: {
+      type: Object as () => any,
+      default: null
     }
   },
   emits: ['manage'],
   setup(props) {
     const agentName = computed(() => {
-      return props.agent?.name || 'No Agent Configured'
+      if (!props.agent) {
+        return 'No Agent Configured'
+      }
+      
+      // Get current user from props or use default
+      const userName = props.currentUser?.username || props.currentUser?.displayName || 'Unknown User'
+      
+      return `Personal AI ${props.agent.name} for User: ${userName}`
     })
 
     const statusText = computed(() => {
