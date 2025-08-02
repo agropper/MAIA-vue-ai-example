@@ -142,30 +142,56 @@ router.post('/register-verify', async (req, res) => {
       return res.status(400).json({ error: 'User ID and response are required' });
     }
 
-    // For now, skip database operations and just return success
-    // This allows the registration to complete for testing
-    console.log('🔍 Skipping database operations for testing');
-    
-    // Create a mock user document
-    const userDoc = {
-      userId: userId,
-      displayName: userId,
-      domain: 'HIEofOne.org',
-      createdAt: new Date().toISOString()
-    };
+    // Get the user document with the stored challenge
+    let userDoc;
+    try {
+      userDoc = await couchDBClient.getDocument('maia_users', userId);
+    } catch (error) {
+      console.error('❌ Error getting user document:', error);
+      return res.status(404).json({ error: 'User registration not found. Please try registering again.' });
+    }
 
-    // For now, skip database operations and just return success
-    // This is a simplified approach for testing
-    console.log('🔍 Skipping database save for testing');
-    
-    res.json({ 
-      success: true, 
-      message: 'Registration successful (testing mode)',
-      user: {
-        userId: userDoc.userId,
-        displayName: userDoc.displayName
-      }
+    if (!userDoc || !userDoc.challenge) {
+      return res.status(400).json({ error: 'No registration challenge found. Please try registering again.' });
+    }
+
+    // Verify the registration response
+    const verification = await verifyRegistrationResponse({
+      response,
+      expectedChallenge: userDoc.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID
     });
+
+    if (verification.verified) {
+      // Update user document with credential information
+      const updatedUser = {
+        ...userDoc,
+        credentialID: verification.registrationInfo.credentialID,
+        credentialPublicKey: verification.registrationInfo.credentialPublicKey,
+        counter: verification.registrationInfo.counter,
+        transports: response.response.transports || [],
+        challenge: undefined, // Remove the challenge
+        updatedAt: new Date().toISOString()
+      };
+
+      // Save the updated user document to Cloudant
+      await couchDBClient.saveDocument('maia_users', updatedUser);
+      
+      console.log('✅ Passkey registration successful for user:', userId);
+      
+      res.json({ 
+        success: true, 
+        message: 'Passkey registration successful',
+        user: {
+          userId: updatedUser.userId,
+          displayName: updatedUser.displayName
+        }
+      });
+    } else {
+      console.error('❌ Registration verification failed for user:', userId);
+      res.status(400).json({ error: 'Registration verification failed' });
+    }
   } catch (error) {
     console.error('❌ Error verifying registration:', error);
     res.status(500).json({ error: 'Failed to verify registration' });
@@ -250,7 +276,7 @@ router.post('/authenticate-verify', async (req, res) => {
       authenticator: {
         credentialPublicKey: userDoc.credentialPublicKey,
         credentialID: userDoc.credentialID,
-        counter: userDoc.counter
+        counter: userDoc.counter || 0
       }
     });
 
