@@ -1154,35 +1154,51 @@ app.post('/api/knowledge-bases', async (req, res) => {
     const { name, description, document_uuids } = req.body;
     
     // Get available embedding models first
-    let embeddingModelId = '22653204-79ed-11ef-bf8f-4e013e2ddde4'; // Default fallback - using the embedding model from the existing KB
+    let embeddingModelId = null;
     
     try {
       const modelsResponse = await doRequest('/v2/gen-ai/models');
       const models = modelsResponse.models || modelsResponse.data?.models || [];
       
-      // Find an embedding model
-      const embeddingModel = models.find(model => 
-        model.name && model.name.toLowerCase().includes('embedding')
+      // Find the MODEL_USECASE_KNOWLEDGEBASE model
+      const knowledgeBaseModel = models.find(model => 
+        model.use_case === 'knowledgebase' || 
+        model.use_case === 'MODEL_USECASE_KNOWLEDGEBASE' ||
+        (model.name && model.name.toLowerCase().includes('knowledge'))
       );
       
-      if (embeddingModel) {
-        embeddingModelId = embeddingModel.id || embeddingModel.uuid;
-        console.log(`📚 Using embedding model: ${embeddingModel.name} (${embeddingModelId})`);
+      if (knowledgeBaseModel) {
+        embeddingModelId = knowledgeBaseModel.id || knowledgeBaseModel.uuid;
+        console.log(`📚 Using knowledge base model: ${knowledgeBaseModel.name} (${embeddingModelId})`);
       } else {
-        console.log(`⚠️ No embedding model found, using default: ${embeddingModelId}`);
+        // Fallback to any embedding model
+        const embeddingModel = models.find(model => 
+          model.name && model.name.toLowerCase().includes('embedding')
+        );
+        
+        if (embeddingModel) {
+          embeddingModelId = embeddingModel.id || embeddingModel.uuid;
+          console.log(`📚 Using embedding model as fallback: ${embeddingModel.name} (${embeddingModelId})`);
+        } else {
+          console.log(`⚠️ No knowledge base or embedding model found, using default`);
+        }
       }
     } catch (modelError) {
-      console.log(`⚠️ Failed to get embedding models, using default: ${embeddingModelId}`);
+      console.log(`⚠️ Failed to get models, proceeding without specific embedding model`);
     }
     
     const kbData = {
       name,
       description,
       database_uuid: process.env.DIGITALOCEAN_OPENSEARCH_DB_UUID || 'genai-driftwood'
-      // Not specifying embedding_model_id - let DigitalOcean choose the default
     };
 
-    console.log(`📚 Creating knowledge base: ${name} with embedding model: ${embeddingModelId}`);
+    // Add embedding model if found
+    if (embeddingModelId) {
+      kbData.embedding_model_id = embeddingModelId;
+    }
+
+    console.log(`📚 Creating knowledge base: ${name}${embeddingModelId ? ` with embedding model: ${embeddingModelId}` : ''}`);
     const knowledgeBase = await doRequest('/v2/gen-ai/knowledge_bases', {
       method: 'POST',
       body: JSON.stringify(kbData)

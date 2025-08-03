@@ -484,6 +484,10 @@ export default defineComponent({
     uploadedFiles: {
       type: Array as PropType<UploadedFile[]>,
       default: () => []
+    },
+    currentUser: {
+      type: Object,
+      default: null
     }
   },
   emits: ['update:modelValue', 'agent-created', 'agent-selected', 'agent-updated', 'refresh-agent-data', 'user-authenticated'],
@@ -922,16 +926,16 @@ export default defineComponent({
     // Handle create new KB
     const handleCreateKnowledgeBase = () => {
       console.log('🔍 handleCreateKnowledgeBase called')
-      console.log('🔍 isAuthenticated:', isAuthenticated.value)
+      console.log('🔍 currentUser:', props.currentUser)
       console.log('🔍 showPasskeyAuthDialog:', showPasskeyAuthDialog.value)
       
-      if (!isAuthenticated.value) {
+      if (!props.currentUser) {
         // Show passkey authentication first
-        console.log('🔍 Showing passkey auth dialog')
+        console.log('🔍 Showing passkey auth dialog - user not signed in')
         showPasskeyAuthDialog.value = true
       } else {
         // User is already authenticated, show KB creation dialog
-        console.log('🔍 Showing KB creation dialog')
+        console.log('🔍 Showing KB creation dialog - user already signed in as:', props.currentUser.username)
         showCreateKbDialog.value = true
       }
     }

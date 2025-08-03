@@ -444,6 +444,7 @@ export default defineComponent({
     v-model="showAgentManagementDialog"
     :AIoptions="AIoptions"
     :uploadedFiles="appState.uploadedFiles"
+    :currentUser="currentUser"
     @agent-updated="handleAgentUpdated"
     @refresh-agent-data="refreshAgentData"
     @user-authenticated="handleUserAuthenticated"
