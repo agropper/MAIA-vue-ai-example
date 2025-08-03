@@ -1619,7 +1619,10 @@ If you're unsure about medical advice, recommend consulting with a healthcare pr
 // =============================================================================
 
 // Import passkey routes
-import passkeyRoutes from './src/routes/passkey-routes.js';
+import passkeyRoutes, { setCouchDBClient as setPasskeyCouchDBClient } from './src/routes/passkey-routes.js';
+
+// Pass the CouchDB client to the passkey routes
+setPasskeyCouchDBClient(couchDBClient);
 
 // Mount passkey routes
 app.use('/api/passkey', passkeyRoutes);

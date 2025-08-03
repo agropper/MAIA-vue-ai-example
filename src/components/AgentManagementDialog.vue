@@ -736,18 +736,27 @@ export default defineComponent({
 
     // Passkey authentication methods
     const handlePasskeyAuthenticated = (userData: { userId: string }) => {
-      currentUser.value = {
+      const userInfo = {
         username: userData.userId,
         displayName: userData.userId
       }
+      currentUser.value = userInfo
       isAuthenticated.value = true
       showPasskeyAuthDialog.value = false
       
       // Emit the current user to parent component
-      emit('user-authenticated', currentUser.value)
+      emit('user-authenticated', userInfo)
       
-      // Now proceed with KB creation
-      showCreateKbDialog.value = true
+      console.log('🔍 User authenticated in AgentManagementDialog:', userInfo)
+      
+      // Close the dialog to return to main interface
+      // User can now click "Create New Knowledge Base" again if they want to proceed
+      emit('update:modelValue', false)
+      
+      $q.notify({
+        type: 'positive',
+        message: `Welcome, ${userInfo.displayName}! You can now create knowledge bases.`
+      })
     }
 
 

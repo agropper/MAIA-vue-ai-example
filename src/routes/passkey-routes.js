@@ -1,5 +1,4 @@
 import express from 'express';
-import { createCouchDBClient } from '../utils/couchdb-client.js';
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -7,14 +6,50 @@ import {
   verifyAuthenticationResponse
 } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
+import crypto from 'crypto';
 
 const router = express.Router();
-const couchDBClient = createCouchDBClient();
+let couchDBClient = null;
+
+// Function to set the CouchDB client (will be called from server.js)
+export const setCouchDBClient = (client) => {
+  console.log('🔍 Setting CouchDB client for passkey routes:', !!client);
+  couchDBClient = client;
+};
+
+// Helper function to convert stored credential format to WebAuthn format
+const convertStoredCredential = (storedCredential) => {
+  if (!storedCredential) return null;
+  
+  console.log('🔍 Converting stored credential:', typeof storedCredential, storedCredential);
+  
+  // If it's already a string (base64), return as is
+  if (typeof storedCredential === 'string') {
+    console.log('🔍 Returning as string (base64)');
+    return storedCredential;
+  }
+  
+  // If it's an object with numeric keys, convert to ArrayBuffer
+  if (typeof storedCredential === 'object' && storedCredential !== null) {
+    const keys = Object.keys(storedCredential).filter(key => !isNaN(parseInt(key))).sort((a, b) => parseInt(a) - parseInt(b));
+    const buffer = new Uint8Array(keys.length);
+    
+    for (let i = 0; i < keys.length; i++) {
+      buffer[i] = storedCredential[keys[i]];
+    }
+    
+    console.log('🔍 Converting object to ArrayBuffer, length:', buffer.length);
+    return buffer.buffer;
+  }
+  
+  console.log('🔍 Returning as is');
+  return storedCredential;
+};
 
 // Relying party configuration
 const rpName = 'HIEofOne.org';
 const rpID = 'localhost'; // For local development
-const origin = `https://${rpID}`;
+const origin = `http://localhost:3001`; // Use the actual server origin
 
 // Check if user ID is available
 router.post('/check-user', async (req, res) => {
@@ -106,22 +141,26 @@ router.post('/register', async (req, res) => {
 
     // Store user document with challenge for verification
     try {
+      console.log('🔍 Attempting to save user document for:', userId);
       await couchDBClient.saveDocument('maia_users', userDoc);
-      console.log('🔍 User document saved for registration:', userId);
+      console.log('✅ User document saved for registration:', userId);
     } catch (error) {
-      console.log('🔍 Failed to save user document:', error.message);
+      console.error('❌ Failed to save user document:', error.message);
       // If database doesn't exist, create it first
       if (error.message.includes('error happened in your connection')) {
         try {
+          console.log('🔍 Creating maia_users database...');
           await couchDBClient.createDatabase('maia_users');
+          console.log('✅ Database created, now saving user document...');
           await couchDBClient.saveDocument('maia_users', userDoc);
-          console.log('🔍 Database created and user document saved:', userId);
+          console.log('✅ Database created and user document saved:', userId);
         } catch (createError) {
           console.error('❌ Failed to create database:', createError);
           // For now, continue without database storage
           console.log('🔍 Continuing without database storage for:', userId);
         }
       } else {
+        console.error('❌ Database error:', error);
         throw error;
       }
     }
@@ -145,7 +184,10 @@ router.post('/register-verify', async (req, res) => {
     // Get the user document with the stored challenge
     let userDoc;
     try {
+      console.log('🔍 Getting user document for verification:', userId);
+      console.log('🔍 CouchDB client available:', !!couchDBClient);
       userDoc = await couchDBClient.getDocument('maia_users', userId);
+      console.log('🔍 User document retrieved:', !!userDoc);
     } catch (error) {
       console.error('❌ Error getting user document:', error);
       return res.status(404).json({ error: 'User registration not found. Please try registering again.' });
@@ -227,14 +269,47 @@ router.post('/authenticate', async (req, res) => {
     }
 
     // Generate authentication options
-    const options = await generateAuthenticationOptions({
-      rpID,
+    const credentialID = convertStoredCredential(userDoc.credentialID);
+    
+    console.log('🔍 Original credentialID:', userDoc.credentialID);
+    console.log('🔍 Converted credentialID:', credentialID);
+    console.log('🔍 credentialID type:', typeof credentialID);
+    console.log('🔍 credentialID instanceof ArrayBuffer:', credentialID instanceof ArrayBuffer);
+    
+    // Convert ArrayBuffer to base64 string for transmission
+    let credentialIDBase64;
+    if (credentialID instanceof ArrayBuffer) {
+      const uint8Array = new Uint8Array(credentialID);
+      credentialIDBase64 = btoa(String.fromCharCode(...uint8Array));
+      console.log('🔍 Converted ArrayBuffer to base64:', credentialIDBase64);
+    } else if (typeof credentialID === 'string') {
+      credentialIDBase64 = credentialID;
+      console.log('🔍 Using string as base64:', credentialIDBase64);
+    } else {
+      console.log('🔍 Invalid credential ID format:', credentialID);
+      throw new Error('Invalid credential ID format');
+    }
+    
+    console.log('🔍 Final credentialIDBase64:', credentialIDBase64);
+    
+    // Generate authentication options manually instead of using the library
+    // since it's not properly handling our credential ID
+    const challenge = crypto.randomBytes(32);
+    const challengeBase64 = isoBase64URL.fromBuffer(challenge);
+    
+    const options = {
+      challenge: challengeBase64,
       allowCredentials: [{
-        id: userDoc.credentialID,
+        id: credentialIDBase64,
         type: 'public-key'
       }],
-      userVerification: 'preferred'
-    });
+      timeout: 60000,
+      userVerification: 'preferred',
+      rpId: rpID,
+      authenticatorAttachment: 'platform'
+    };
+    
+    console.log('🔍 Generated options:', JSON.stringify(options, null, 2));
 
     // Store challenge in user document
     const updatedUser = {
@@ -274,8 +349,8 @@ router.post('/authenticate-verify', async (req, res) => {
       expectedOrigin: origin,
       expectedRPID: rpID,
       authenticator: {
-        credentialPublicKey: userDoc.credentialPublicKey,
-        credentialID: userDoc.credentialID,
+        credentialPublicKey: convertStoredCredential(userDoc.credentialPublicKey),
+        credentialID: convertStoredCredential(userDoc.credentialID),
         counter: userDoc.counter || 0
       }
     });

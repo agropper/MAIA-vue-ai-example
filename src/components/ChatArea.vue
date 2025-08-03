@@ -6,6 +6,8 @@
       :warning="warning"
       :currentUser="currentUser"
       @manage="$emit('manage-agent')"
+      @sign-in="$emit('sign-in')"
+      @sign-out="$emit('sign-out')"
     />
     
     <!-- File Badges -->
@@ -145,7 +147,9 @@ export default defineComponent({
     'view-file',
     'save-to-file',
     'trigger-save-to-couchdb',
-    'close-no-save'
+    'close-no-save',
+    'sign-in',
+    'sign-out'
   ],
   methods: {
     editMessage(idx: number) {

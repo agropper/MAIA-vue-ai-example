@@ -10,7 +10,30 @@
             class="q-mr-sm"
           />
           <div class="status-text">
-            <div class="text-body2">{{ agentName }}</div>
+            <div class="text-body2">
+              {{ agentName }}
+              <!-- Sign-in/Sign-out buttons -->
+              <q-btn
+                v-if="!currentUser"
+                flat
+                dense
+                size="sm"
+                color="primary"
+                label="Sign-in"
+                @click="$emit('sign-in')"
+                class="q-ml-sm"
+              />
+              <q-btn
+                v-else
+                flat
+                dense
+                size="sm"
+                color="grey"
+                label="Sign-out"
+                @click="$emit('sign-out')"
+                class="q-ml-sm"
+              />
+            </div>
             <div class="text-caption text-grey">{{ statusText }}</div>
             <!-- Show warning prominently if present -->
             <div v-if="warning" class="text-caption text-warning q-mt-xs warning-text">
@@ -37,10 +60,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue'
+import { defineComponent, computed, watch } from 'vue'
 import { QIcon, QBtn, QCard, QCardSection, QSpace } from 'quasar'
 
-interface DigitalOceanAgent {
+export interface DigitalOceanAgent {
   id: string
   name: string
   description: string
@@ -90,7 +113,7 @@ export default defineComponent({
       default: null
     }
   },
-  emits: ['manage'],
+  emits: ['manage', 'sign-in', 'sign-out'],
   setup(props) {
     const agentName = computed(() => {
       if (!props.agent) {
@@ -99,6 +122,10 @@ export default defineComponent({
       
       // Get current user from props or use default
       const userName = props.currentUser?.username || props.currentUser?.displayName || 'Unknown User'
+      
+      console.log('🔍 AgentStatusIndicator - currentUser prop:', props.currentUser)
+      console.log('🔍 AgentStatusIndicator - userName:', userName)
+      console.log('🔍 AgentStatusIndicator - !props.currentUser:', !props.currentUser)
       
       return `Personal AI ${props.agent.name} for User: ${userName}`
     })
@@ -159,6 +186,11 @@ export default defineComponent({
         default:
           return 'grey'
       }
+    })
+
+    // Debug currentUser prop changes
+    watch(() => props.currentUser, (newUser) => {
+      console.log('🔍 AgentStatusIndicator - currentUser prop changed:', newUser)
     })
 
     return {

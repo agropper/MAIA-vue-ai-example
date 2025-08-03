@@ -117,16 +117,20 @@
             <div class="text-h6">Authentication Successful!</div>
             <div class="text-body2 q-mt-sm">
               Welcome, <strong>{{ userId }}</strong>!<br>
-              You can now create your knowledge base.
+              You can now create knowledge bases when needed.
             </div>
           </div>
           
           <q-btn
-            label="Continue to KB Creation"
+            label="Done"
             color="primary"
             class="full-width"
             @click="onSuccess"
+            :loading="false"
           />
+          <div class="text-caption text-grey q-mt-xs">
+            You can now close this dialog and return to the main interface
+          </div>
         </div>
 
         <!-- Error State -->
@@ -474,7 +478,9 @@ export default defineComponent({
     }
 
     const onSuccess = () => {
+      console.log('🔍 onSuccess called with userId:', userId.value)
       emit('authenticated', { userId: userId.value })
+      console.log('🔍 authenticated event emitted')
       showDialog.value = false
       // Reset for next use
       currentStep.value = 'choose'

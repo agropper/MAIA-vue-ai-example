@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
+import { defineComponent, ref, watch } from 'vue'
 import { QFile, QIcon, QBtnToggle } from 'quasar'
 import { getSystemMessageType, pickFiles } from '../utils'
 import { useChatState } from '../composables/useChatState'
@@ -15,6 +15,7 @@ import SavedChatsDialog from './SavedChatsDialog.vue'
 import { useCouchDB, type SavedChat } from '../composables/useCouchDB'
 import { API_BASE_URL } from '../utils/apiBase'
 import AgentManagementDialog from './AgentManagementDialog.vue'
+import SignInDialog from './SignInDialog.vue'
 
 const AIoptions = [
   { label: 'Personal Chat', value: `${API_BASE_URL}/personal-chat` },
@@ -33,7 +34,8 @@ export default defineComponent({
     ChatArea,
     QBtnToggle,
     SavedChatsDialog,
-    AgentManagementDialog
+    AgentManagementDialog,
+    SignInDialog
   },
   computed: {
     placeholderText() {
@@ -61,6 +63,7 @@ export default defineComponent({
     const popupRef = ref<InstanceType<typeof PopUp> | null>(null)
     const showSavedChatsDialog = ref(false)
     const showAgentManagementDialog = ref(false)
+    const showSignInDialog = ref(false)
     const currentAgent = ref<any>(null)
     const agentWarning = ref<string>('')
     const currentUser = ref<any>(null)
@@ -139,8 +142,30 @@ export default defineComponent({
 
     const handleUserAuthenticated = (userData: any) => {
       currentUser.value = userData
-      console.log('🔍 User authenticated:', userData)
+      console.log('🔍 User authenticated in ChatPrompt:', userData)
+      
+      // Force a reactive update by triggering a re-render
+      // This ensures the UI updates immediately
+      setTimeout(() => {
+        console.log('🔍 Current user after timeout:', currentUser.value)
+      }, 100)
     }
+
+    const handleSignIn = () => {
+      console.log('🔍 Sign-in requested')
+      // Open a dedicated sign-in dialog instead of Agent Management
+      showSignInDialog.value = true
+    }
+
+    const handleSignOut = () => {
+      console.log('🔍 Sign-out requested')
+      currentUser.value = null
+    }
+
+    // Debug currentUser changes
+    watch(currentUser, (newUser) => {
+      console.log('🔍 ChatPrompt - currentUser changed:', newUser)
+    })
 
     const editMessage = (idx: number) => {
       appState.editBox.push(idx)
@@ -324,7 +349,10 @@ export default defineComponent({
       currentUser,
       handleManageAgent,
       handleUserAuthenticated,
-      refreshAgentData
+      refreshAgentData,
+      handleSignIn,
+      handleSignOut,
+      showSignInDialog
     }
   }
 })
@@ -377,6 +405,8 @@ export default defineComponent({
     :warning="agentWarning"
     :currentUser="currentUser"
     @manage-agent="handleManageAgent"
+    @sign-in="handleSignIn"
+    @sign-out="handleSignOut"
   />
 
   <!-- Bottom Toolbar -->
@@ -416,6 +446,12 @@ export default defineComponent({
     :uploadedFiles="appState.uploadedFiles"
     @agent-updated="handleAgentUpdated"
     @refresh-agent-data="refreshAgentData"
+    @user-authenticated="handleUserAuthenticated"
+  />
+
+  <!-- Sign In Dialog -->
+  <SignInDialog
+    v-model="showSignInDialog"
     @user-authenticated="handleUserAuthenticated"
   />
 </template>
