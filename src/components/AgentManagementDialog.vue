@@ -397,10 +397,10 @@
       </q-card>
     </q-dialog>
 
-    <!-- Passkey Authentication Dialog -->
-    <PasskeyAuthDialog
-      v-model="showPasskeyAuthDialog"
-      @authenticated="handlePasskeyAuthenticated"
+    <!-- Sign In Dialog for Create Knowledge Base flow -->
+    <SignInDialog
+      v-model="showSignInDialog"
+      @user-authenticated="handleUserAuthenticated"
     />
   </q-dialog>
 </template>
@@ -428,7 +428,7 @@ import {
   QTooltip
 } from 'quasar'
 import AgentCreationWizard from './AgentCreationWizard.vue'
-import PasskeyAuthDialog from './PasskeyAuthDialog.vue'
+import SignInDialog from './SignInDialog.vue'
 import type { UploadedFile } from '../types'
 
 export interface DigitalOceanAgent {
@@ -471,7 +471,7 @@ export default defineComponent({
     QItemSection,
     QItemLabel,
     AgentCreationWizard,
-    PasskeyAuthDialog,
+    SignInDialog,
     QCheckbox,
     QChip,
     QTooltip
@@ -522,8 +522,8 @@ export default defineComponent({
     const isCreatingKb = ref(false)
     const selectedDocuments = ref<string[]>([])
 
-    // Passkey Authentication state
-    const showPasskeyAuthDialog = ref(false)
+    // Sign In Dialog state
+    const showSignInDialog = ref(false)
     const currentUser = ref<any>(null)
     const isAuthenticated = ref(false)
 
@@ -738,15 +738,17 @@ export default defineComponent({
       }
     }
 
-    // Passkey authentication methods
-    const handlePasskeyAuthenticated = (userData: { userId: string }) => {
+
+
+    // Handle user authenticated from SignInDialog
+    const handleUserAuthenticated = (userData: { userId: string }) => {
       const userInfo = {
         username: userData.userId,
         displayName: userData.userId
       }
       currentUser.value = userInfo
       isAuthenticated.value = true
-      showPasskeyAuthDialog.value = false
+      showSignInDialog.value = false
       
       // Emit the current user to parent component
       emit('user-authenticated', userInfo)
@@ -762,7 +764,6 @@ export default defineComponent({
         message: `Welcome, ${userInfo.displayName}! You can now create knowledge bases.`
       })
     }
-
 
 
     // Load agent info when dialog opens
@@ -927,12 +928,12 @@ export default defineComponent({
     const handleCreateKnowledgeBase = () => {
       console.log('🔍 handleCreateKnowledgeBase called')
       console.log('🔍 currentUser:', props.currentUser)
-      console.log('🔍 showPasskeyAuthDialog:', showPasskeyAuthDialog.value)
+      console.log('🔍 showSignInDialog:', showSignInDialog.value)
       
       if (!props.currentUser) {
-        // Show passkey authentication first
-        console.log('🔍 Showing passkey auth dialog - user not signed in')
-        showPasskeyAuthDialog.value = true
+        // Show sign-in dialog for existing users
+        console.log('🔍 Showing sign-in dialog - user not signed in')
+        showSignInDialog.value = true
       } else {
         // User is already authenticated, show KB creation dialog
         console.log('🔍 Showing KB creation dialog - user already signed in as:', props.currentUser.username)
@@ -1291,8 +1292,8 @@ export default defineComponent({
       executeConfirmAction,
       currentUser,
       toggleKBProtection,
-      showPasskeyAuthDialog,
-      handlePasskeyAuthenticated
+      showSignInDialog,
+      handleUserAuthenticated
     }
   }
 })
